@@ -1,5 +1,3 @@
-document id는 document url로 대체
-
 createDocBase 만들어야함
 
 Error Code
