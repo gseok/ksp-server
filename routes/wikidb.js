@@ -1,15 +1,34 @@
+// db and library setting
 var mongo = require('mongodb');
 var async = require('async');
 var Server = mongo.Server,
 Db = mongo.Db,
 BSON = mongo.BSONPure;
-var server = new Server('localhost', 27017, {auto_reconnect: true});
+var server = new Server('172.21.101.80', 27017, {auto_reconnect: true});
 db = new Db('wikidb', server);
 db.open(function(err, db) {
     if (!err) {
         console.log('Connected to \'wikidb\' database');
     }
 });
+
+
+// Return Code
+var RETURN_CODE = {
+    SUCCESS: 0,
+    UNKNOWN_ERR: 1,
+    INVALID_PARAM: 2,
+    CANNOT_FIND_DOC: 3,
+    DOCUMENT_URL_ALREADY_EXIST: 4
+};
+
+// Document type
+var DOC_TYPE = {
+    DOCUMENT: 0,
+    FILE_STROAGE: 1,
+    BOOKMARK: 2
+};
+
 
 function cloneDoc(doc) {
     return JSON.parse(JSON.stringify(doc));
@@ -29,7 +48,7 @@ exports.getDocumentTree = function(req, res) {
         depth = Number(input.d) - 1;
     } else {
         res.send({
-            sc: 2,
+            sc: RETURN_CODE.INVALID_PARAM,
             sm: 'Invalid parameter'
         });
     }
@@ -38,7 +57,7 @@ exports.getDocumentTree = function(req, res) {
             db.collection(docBase, function(err, collection) {
                 if (err) {
                     res.send({
-                        sc: 1,
+                        sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
@@ -50,7 +69,7 @@ exports.getDocumentTree = function(req, res) {
             collection.findOne({url: url, locale: locale, latest: true, deletedDate: ''}, function(err, item) {
                 if (err) {
                     res.send({
-                        sc: 1,
+                        sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
@@ -58,7 +77,7 @@ exports.getDocumentTree = function(req, res) {
                         cb(null, collection, item);
                     } else {
                         res.send({
-                            sc: 3,
+                            sc: RETURN_CODE.CANNOT_FIND_DOC,
                             sm: 'Cannot find a document'
                         });
                     }
@@ -82,7 +101,7 @@ exports.getDocumentTree = function(req, res) {
             }).toArray(function (err, items) {
                 if (err) {
                     res.send({
-                        sc: 1,
+                        sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
@@ -103,7 +122,7 @@ exports.getDocumentTree = function(req, res) {
                                         docs.push(doc);
                                     }
                                     res.send({
-                                        sc: 0,
+                                        sc: RETURN_CODE.SUCCESS,
                                         sm: 'Successfully get documents',
                                         uds: [],
                                         dds: docs
@@ -125,7 +144,7 @@ exports.saveDocument = function(req, res) {
         locale = input.l.toLowerCase();
     } else {
         res.send({
-            sc: 2,
+            sc: RETURN_CODE.INVALID_PARAM,
             sm: 'Invalid parameter'
         });
     }
@@ -134,7 +153,7 @@ exports.saveDocument = function(req, res) {
             db.collection(docBase, function(err, collection) {
                 if (err) {
                     res.send({
-                        sc: 1,
+                        sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'});
                 } else {
                     cb(null, collection);
@@ -158,7 +177,7 @@ exports.saveDocument = function(req, res) {
                     cb(null, collection);
                 } else {
                     res.send({
-                        sc: 3,
+                        sc: RETURN_CODE.CANNOT_FIND_DOC,
                         sm: 'Cannot find a document'
                     });
                 }
@@ -168,12 +187,12 @@ exports.saveDocument = function(req, res) {
             collection.insert(newDoc, {}, function(err, result) {
                 if (err) {
                     res.send({
-                        sc: 1,
+                        sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
                     res.send({
-                        sc: 0,
+                        sc: RETURN_CODE.SUCCESS,
                         sm: 'Successfully saved'
                     });
                 }
@@ -196,7 +215,7 @@ exports.getDocument = function(req, res) {
         locale = input.l.toLowerCase();
     } else {
         res.send({
-            sc: 2,
+            sc: RETURN_CODE.INVALID_PARAM,
             sm: 'Invalid parameter'
         });
     }
@@ -205,7 +224,7 @@ exports.getDocument = function(req, res) {
             db.collection(docBase, function(err, collection) {
                 if (err) {
                     res.send({
-                        sc: 1,
+                        sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
@@ -219,7 +238,7 @@ exports.getDocument = function(req, res) {
                     cb(null, collection, doc);
                 } else {
                     res.send({
-                        sc: 3,
+                        sc: RETURN_CODE.CANNOT_FIND_DOC,
                         sm: 'Cannot find a document'
                     });
                 }
@@ -238,7 +257,7 @@ exports.getDocument = function(req, res) {
                     return a.left - b.left;
                 });
                 res.send({
-                    sc: 0,
+                    sc: RETURN_CODE.SUCCESS,
                     sm: 'Successfully get document',
                     t: doc.title,
                     c: doc.content,
@@ -279,7 +298,7 @@ exports.createDocument = function(req, res) {
         newDoc.documentType = 0;
     } else {
         res.send({
-            sc: 2,
+            sc: RETURN_CODE.INVALID_PARAM,
             sm: 'Invalid parameter'
         });
     }    
@@ -288,7 +307,7 @@ exports.createDocument = function(req, res) {
             db.collection(docBase, function(err, collection) {
                 if (err) {
                     res.send({
-                        sc: 1,
+                        sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
@@ -302,7 +321,7 @@ exports.createDocument = function(req, res) {
                     cb(null, err, collection);
                 } else {
                     res.send({
-                        sc: 4,
+                        sc: RETURN_CODE.DOCUMENT_URL_ALREADY_EXIST,
                         sm: 'Document url already exist'
                     });
                 }
@@ -360,11 +379,12 @@ function(collection, cb) {
     collection.insert(newDoc, {}, function(err, result) {
         if (err) {
             res.send({
-                sc: 1,
+                sc: RETURN_CODE.UNKNOWN_ERR,
                 sm: 'Unknown error has occurred'
             });
         } else {
-            res.send({sc:0,
+            res.send({
+                sc:RETURN_CODE.SUCCESS,
                 sm: 'Successfully created',
                 u: result[0].url,
                 t: result[0].title,
@@ -386,7 +406,7 @@ exports.checkoutDocumentUrl = function(req, res) {
         docBase = input.db;
     } else {
         res.send({
-            sc: 2,
+            sc: RETURN_CODE.INVALID_PARAM,
             sm: 'Invalid parameter'
         });
     }
@@ -395,7 +415,7 @@ exports.checkoutDocumentUrl = function(req, res) {
             db.collection(docBase, function(err, collection) {
                 if (err) {
                     res.send({
-                        sc: 1,
+                        sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
@@ -407,12 +427,12 @@ exports.checkoutDocumentUrl = function(req, res) {
             collection.findOne({url: url, docBase:docBase, deletedDate: ''}, function(err, doc) {
                 if (doc) {
                     res.send({
-                        sc: 4,
+                        sc: RETURN_CODE.DOCUMENT_URL_ALREADY_EXIST,
                         sm: 'Document url already exist'
                     });
                 } else {
                     res.send({
-                        sc: 0,
+                        sc: RETURN_CODE.SUCCESSS,
                         sm: 'Document url doesn\'t exist'
                     });
                 }
@@ -431,7 +451,7 @@ exports.deleteDocument = function(req, res) {
         docBase = input.db;
     } else {
         res.send({
-            sc: 2,
+            sc: RETURN_CODE.INVALID_PARAM,
             sm: 'Invalid parameter'
         });
     }
@@ -440,7 +460,7 @@ exports.deleteDocument = function(req, res) {
             db.collection(docBase, function(err, collection) {
                 if (err) {
                     res.send({
-                        sc: 1,
+                        sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
@@ -454,7 +474,7 @@ exports.deleteDocument = function(req, res) {
                     cb(null, collection, doc);
                 } else {
                     res.send({
-                        sc: 3,
+                        sc: RETURN_CODE.CANNOT_FIND_DOC,
                         sm: 'Cannot find a document'
                     });
                 }
@@ -468,7 +488,7 @@ exports.deleteDocument = function(req, res) {
                     collection.update({_id: items[i]._id},{$set: {deletedDate: deletedDate}});
                 }
                 res.send({
-                    sc: 0,
+                    sc: RETURN_CODE.SUCCESS,
                     sm: 'Successfully Deleted'
                 });
             });
@@ -489,7 +509,7 @@ exports.getDocumentHistory = function(req, res) {
         length = Number(input.le);
     } else {
         res.send({
-            sc: 2,
+            sc: RETURN_CODE.INVALID_PARAM,
             sm: 'Invalid parameter'
         });
     }
@@ -498,7 +518,7 @@ exports.getDocumentHistory = function(req, res) {
             db.collection(docBase, function(err, collection) {
                 if (err) {
                     res.send({
-                        sc: 1,
+                        sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
@@ -514,7 +534,7 @@ exports.getDocumentHistory = function(req, res) {
 
                 if (items.length < startPosition) {
                     res.send({
-                        sc: 2,
+                        sc: RETURN_CODE.INVALID_PARAM,
                         sm: 'Invalid parameter'
                     });
                 } else {
@@ -529,7 +549,7 @@ exports.getDocumentHistory = function(req, res) {
                         docs.push(doc);
                     }
                     res.send({
-                        sc: 0,
+                        sc: RETURN_CODE.SUCCESS,
                         sm: 'Successfully get document history',
                         vs: docs
                     });
