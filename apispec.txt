@@ -1,0 +1,756 @@
+document id는 document url로 대체
+
+createDocBase 만들어야함
+
+Error Code
+0: Success
+1: Unknown error has occured
+2: Invalid parameter
+3: Cannot find a document
+4: Document url already exist
+
+Document Type
+0: document
+1: file stroage
+2: bookmark
+
+createDocument
+input {
+	em : string - user email
+	db : string - document base
+	t : string - document title
+	l : string - locale
+	u : string - document url
+	pu : number - parent document url
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	i : number - document id
+	t : string - document title
+	pu : number - parent document url
+}
+
+saveDocument
+input {
+	em : string - user email
+	db : string - document base
+	u : string - document url
+	t : string - document title
+	c : string - document contents
+	v : number - document version
+	l : string - locale
+	is : [number] - file ids
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+getDocument
+input {
+	em : string - user email
+	db : string - document base
+	u : string - document url
+	v : number - document version
+	l : string - locale
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	t : string - document title
+	c : string - document content
+	v : number - document version
+	md : string - document modified date
+	mun : string - document modified user name
+	mui : number - document modified user id
+	bu : [number] - breadcrumb document urls
+	bt : [string] - breadcrumb document titles
+}
+
+getDocumentTree
+input {
+	em : string - user email
+	db : string - document base
+	l : string - locale
+	u : number - document url
+	d : number - depth
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	uds : [ud] - user documents
+		ud {
+			t : string - title
+			tp : string - document type
+			pu : number - parent document url
+			u : string - document url
+			c : boolean - has child
+			up - user permissions
+			up {
+				v : boolean - view
+				m : boolean - modify
+				a : boolean - add
+				d : boolean - delete
+				ad : boolean - administration
+			}
+	dds : [dd] - document base documents
+		dd {
+			t : string - title
+			tp : string - document type
+			pu : number - parent document url
+			u : string - document url
+			c : boolean - has child
+			up : - user permissions
+			up {
+				v : boolean - view
+				m : boolean - modify
+				a : boolean - add
+				d : boolean - delete
+				ad : boolean - administration
+			}
+}
+
+checkoutDocumentUrl
+input {
+	em : string - user email
+	db : string - document base
+	u : string - docuument url
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+deleteDocument
+input {
+	em : string - user email
+	db : string - document base
+	u : string - document url
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+getDocumentHistory
+input {
+	em : string - user email
+	db : string - document base
+	u : number - document url
+	l : string - locale
+	s : number - start position
+	le : number - length
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	vs : [version]- versions
+		version {
+			v : number - version
+			n : string - user name
+			i : number - user id
+			m : string - modified date
+		}
+}
+
+duplicateDocument
+input {
+	em : string - user email
+	db : string - document base
+	u : string - document url
+	l : string - locale
+	v : number - version
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+renameDocument
+input {
+	em : string - user email
+	db : string - document base
+	t : string - document title
+	u : string - document url
+	l : string - locale
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+searchDocument
+input {
+	em : string - user email
+	db : string - document base
+	k : string - keyword
+	l : string - locale
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	t : number - total length
+	rs : [result] - results
+		result {
+			i : number - document id
+			t : string - document title
+		}
+}
+
+searchDocumentDetail
+input {
+	em : string - user email
+	db : string - document base
+	k : string - keyword
+	l : string - locale
+	s : number - start position
+	le : number - length
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	t : number - total length
+	rs : [result]- results
+		result {
+			t : string - document title
+			i : number - document id
+			d : string - modified date
+			n : string - modified user name
+			ui : number - modified user id
+			l : number - keyword line total length
+			kls : [keyword line] - keyword lines
+				keyword line {
+					v : string - value
+				}
+		}
+}
+
+uploadFile
+input {
+	em : string - user email
+	n : string - file name
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	i : number - file id
+	u : string - file url
+	iu : string - file icon url
+	n : string - file name
+}
+
+deleteFile
+input {
+	em : string - user email
+	i : number - file id
+	v : number - file version
+	l : string - locale
+}
+output {
+	i : number - file id
+	n : string - file name
+	dis : [number] - document ids
+	dts : [string] - document titles
+}
+
+getUserSettings
+input {
+	em : string - user email
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	l : string - locale
+	s : boolean - show user documents
+}
+
+createBookmark
+input {
+	em : string - user email
+	db : string - document base
+	pi : number - parent document id
+	u : string - bookmark url
+	l : string - locale
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	t - string bookbmark title
+	i - number bookmark id
+	pi - number parent document id
+}
+
+getAttachedFiles
+input {
+	em : string - user email
+	db : string - document base
+	i : number - document id
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	fs : [file] - files
+		file {
+			i : number - file id
+			ic : string - file icon url
+			n : string - file name
+			s : number - file size
+			d : string - uploaded date
+			v : number - version
+		}
+}
+
+getFileHistory
+input {
+	em : string - user email
+	db : string - document base
+	di : number - document id
+	fi : number - file id
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	vs : [version] - versions
+		version {
+			n : string - file name
+			s : number - file size
+			d : string - uploaded date
+			ui : number - uploaded user id
+			un : string - uploaded user name
+		}
+}
+
+getTotalUserCount
+input {
+	em : string - user email
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	v : number - value
+}
+
+findUser
+input {
+	em : string - user email
+	t : string - find type
+	v : string - find value
+	s : number - start position
+	l : number - length
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	uis : [user info] - user infos
+		user info {
+			n : string - user name
+			e : string - user email
+			i : number - user id
+			gis : [number] - group ids
+		}
+	t : number - total number of users
+}
+
+deleteUser
+input {
+	em : string - user email
+	uis : [number] - user ids
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+checkUser
+input {
+	em : string - user email
+	v : string - value
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	uis : [user info] - user infos
+		user info {
+			n : user name
+		}
+}
+
+addUser
+input {
+	em : string - user email
+	v : string - value
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+findGroup
+input {
+	em : string - user email
+	v : string - value
+	s : number - start position
+	l : number - length
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	gis : [group info - group infos
+		group info {
+			n : string - group name
+			i : number - group id
+			a : number - total admins
+			m : number - total members
+		}
+	t : number - number of total groups
+}
+
+getGroupMembers
+input {
+	em : string - user email
+	id : number - group id
+	s : number - start position
+	l : number - length
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	uis : [user info] - user infos
+		user info {
+			i : number - user id
+			n : string - user name
+			e : string - user email
+			a : boolean - isAdmin
+		}
+	t : number - number of total memebers
+}
+
+getGroupAdmins
+input {
+	em : string - user email
+	i : number - group id
+	s : number - start position
+	l : number - length
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	uis : [user info] - user infos
+		user info {
+			i : number - user id
+			n : string - user name
+			e : string - user email
+		}
+	t : number of total memebers
+}
+
+grantUsers
+input {
+	em : string - user email
+	is : [number] - selected user ids
+	gi : number - selected group id
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+revokeUsers
+input {
+	em : string - user email
+	is : [number] - selected user ids
+	gi : number - selected group id
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+addUsersToGroup
+input {
+	em : string - user email
+	uis : [number] - selected user ids
+	gi : number - selected group id
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+removeUsersFromGroup
+input {
+	em : string - user email
+	uis : [number] - selected user ids
+	gi : number - selected group id
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+getDocumentPermission
+input {
+	em : string - user email
+	i : number - document id
+	db : string - document base
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	a : anonymous - anonymous permission
+		anonymous {
+			v : boolean - view
+			m : boolean - modify
+			a : boolean - add
+			d : boolean - delete
+			ad : boolean - admin
+		}
+	gs : [group] - group permissions
+		group {
+			i : number - group id
+			n : string - group name
+			v : boolean - view
+			m : boolean - modify
+			a : boolean - add
+			d : boolean - delete
+			ad : boolean - admin
+		}
+	us : [user] - user permissions
+		user {
+			i : number - user id
+			n : string - user name
+			e : string - user email
+			v : boolean - view
+			m : boolean - modify
+			a : boolean - add
+			d : boolean - delete
+			ad : boolean - admin
+		}
+}
+
+setDocumentPermission
+input {
+	em : string - user email
+	db : string - document base
+	i : number - document id
+	a : anonymous - anonymous permission
+		anonymous {
+			v : boolean - view
+			m : boolean - modify
+			a : boolean - add
+			d : boolean - delete
+			ad : boolean - admin
+		}
+	gs : [group] - group permissions
+		group {
+			i : number - group id
+			n : string - group name
+			v : boolean - view
+			m : boolean - modify
+			a : boolean - add
+			d : boolean - delete
+			ad : boolean - admin
+		}
+	us : [user] - user permissions
+		user {
+			i : number - user id
+			n : string - user name
+			e : string - user email
+			v : boolean - view
+			m : boolean - modify
+			a : boolean - add
+			d : boolean - delete
+			ad : boolean - admin
+		}
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+changeDocumentPermission
+input {
+	em : string - user email
+	db : string - document base
+	di : number - document id
+	t : string - type (group|user|anonymous)
+	i : number - id (groupid|userid)
+	a : string - action (view|modify|add|delete|admin)
+	v : boolean - value
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+applyPermissionToSub
+input {
+	em : string - user email
+	db : string - dcoument base
+	i : number - document id
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+getSchedule
+input {
+	em : string - user email
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	p : string - period
+	d : string - day
+	h : number - hour
+}
+
+setSchedule
+input {
+	em : string - user email
+	p : string - period
+	d : string - day
+	h : number - hour
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+getBackupStatus
+input {
+	em : string - user email
+}
+output {
+	l : string - last backup date
+	n : string - next backup date
+	b : backup schedule - backup schedule
+		backup schedule {
+			p : string - period
+			d : string - day
+			h : number - hour
+		}
+}
+
+getBackupSpace
+input {
+	em : string - user email
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	t : number - total bytes
+	u : number - used bytes
+}
+
+getBackupLocation
+input {
+	em : string - user email
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	l : string - location
+}
+
+setBackupLocation
+input {
+	em : string - user email
+	l : string - location
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+runSchedule
+input {
+	em : string - user email
+	r : boolean - run
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+getRunSchedule
+input {
+	em : string - user email
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	r : boolean - run
+}
+
+doBackup
+input {
+	em : string - user email
+	l : function - progress listener
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+cancelBackup
+input {
+	em : string - user email
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+getRestoreStatus
+input {
+	em : string - user email
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	bs : [backup] - backups
+		backup {
+			d : string - date
+			s : number - bytes
+			i : number - backup id
+		}
+}
+
+doRestore	
+input {
+	em : string - user email
+	i : number - backup id
+	l : function - progress listener
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+cancelRestore
+input {
+	em : string - user email
+}
+output {
+	sc : number - status code
+	sm : string - status message
+}
+
+getTemplates
+input {
+	em : string - user email
+}
+output {
+	sc : number - status code
+	sm : string - status message
+	ts : [template] - templates
+		template {
+			i : number - template id
+			n : string - template name
+			ic : string - template icon url
+			c : string - template contents
+		}
+}
