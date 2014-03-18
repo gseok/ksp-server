@@ -1,0 +1,8 @@
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"webida document", "u":"webida", "pu":"", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"wikida document", "u":"webida/wikida", "pu":"webida", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"jugwan document", "u":"webida/jugwan", "pu":"webida", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"jugwan sub document 1", "u":"webida/jugwan/sub1", "pu":"webida/jugwan", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"jugwan sub document 2", "u":"webida/jugwan/sub2", "pu":"webida/jugwan", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"wikida sub document 1", "u":"webida/wikida/sub1", "pu":"webida/jugwan", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"wikida sub document 2", "u":"webida/wikida/sub2", "pu":"webida/wikida", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "u":"webida/jugwan", "t":"modified title", "c":"modified contents", "is":[], "l":"enUS", "v":"0"}' http://localhost:3000/saveDocument
