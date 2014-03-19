@@ -6,6 +6,8 @@
 	"dependencies": {
 		"express": "3.x",
 		"mongodb": "1.x",
-                "async": "0.x"
+        "async": "0.x",
+        "mocha": "1.x",
+        "should": "3.x"
 	}
 }
