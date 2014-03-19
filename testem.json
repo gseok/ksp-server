@@ -1,0 +1,9 @@
+{
+    "launchers": {
+        "Mocha": {
+            "command": "mocha test/test*.js",
+            "protocol": "tap"
+        }
+    }
+}
+
