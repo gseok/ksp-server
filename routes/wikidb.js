@@ -19,13 +19,14 @@ var RETURN_CODE = {
     UNKNOWN_ERR: 1,
     INVALID_PARAM: 2,
     CANNOT_FIND_DOC: 3,
-    DOCUMENT_URL_ALREADY_EXIST: 4
+    DOCUMENT_URL_ALREADY_EXIST: 4,
+    CANNOT_FIND_REVISION: 5
 };
 
 // Document type
 var DOC_TYPE = {
     DOCUMENT: 0,
-    FILE_STROAGE: 1,
+    FILE_STORAGE: 1,
     BOOKMARK: 2
 };
 
@@ -39,13 +40,21 @@ exports.getDocumentTree = function(req, res) {
     console.log('getDocumentTree', req.body);
     var input = req.body;
     var docBase, locale, depth, url;
-    var docs = [];
-
-    if ('em' in input && 'db' in input && 'l' in input && 'u' in input && 'd' in input) {
+    var results = [];
+    var totalResults = 0;
+    var processedResults = 0;
+    if ('em' in input && 'db' in input && 'u' in input && 'l' in input && 'd' in input) {
+        // TODO : user validation
         docBase = input.db;
-        locale = input.l.toLowerCase();
         url = input.u;
+        locale = input.l.toLowerCase();
         depth = Number(input.d) - 1;
+        if (depth < 1) {
+            res.send({
+                sc: RETURN_CODE.INVALID_PARAM,
+                sm: 'Invalid parameter'
+            });
+        }
     } else {
         res.send({
             sc: RETURN_CODE.INVALID_PARAM,
@@ -54,19 +63,19 @@ exports.getDocumentTree = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collections('docs', function(err, collection) {
+            db.collection('docs', function(err, docs) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
-                    cb(null, collection);
+                    cb(null, docs);
                 }
             });
         },
-        function(collection, cb) {
-            collection.findOne({url: url, locale: locale, latest: true, deletedDate: ''}, function(err, item) {
+        function(docs, cb) {
+            docs.findOne({url: url, docBase: docBase, deletedDate: ''}, function(err, item) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
@@ -74,7 +83,7 @@ exports.getDocumentTree = function(req, res) {
                     });
                 } else {
                     if (item) {
-                        cb(null, collection, item);
+                        cb(null, docs, item);
                     } else {
                         res.send({
                             sc: RETURN_CODE.CANNOT_FIND_DOC,
@@ -84,10 +93,10 @@ exports.getDocumentTree = function(req, res) {
                 }
             });
         },
-        function(collection, item, cb) {
+        function(docs, item, cb) {
             var leftLimit = Number(item.left) + Number(depth);
             var rightLimit = Number(item.right) - Number(depth);
-            collection.find({
+            docs.find({
                 '$or' : [
                 {
                     left: { '$gte': item.left, '$lte': leftLimit }
@@ -96,7 +105,6 @@ exports.getDocumentTree = function(req, res) {
                     right: { '$gte': rightLimit, '$lte': item.right }
                 }
                 ],
-                latest: true,
                 deletedDate: ''
             }).toArray(function (err, items) {
                 if (err) {
@@ -105,42 +113,75 @@ exports.getDocumentTree = function(req, res) {
                         sm: 'Unknown error has occurred'
                     });
                 } else {
-                    for(var i = 0; i < items.length; i++) {
-                        var doc = {};
-                        doc.t = items[i].title;
-                        doc.u = items[i].url;
-                                        doc.tp = items[i].documentType; // 0: document, 1: file storage, 2: bookmark
-                                        doc.pu = items[i].parentDocumentUrl;
-                                        doc.up = { // TODO with permissions
-                                            v: true,
-                                            m: true,
-                                            a: true,
-                                            d: true,
-                                            ad: true,
-                                        };
-                                        doc.c = items[i].hasChild;
-                                        docs.push(doc);
-                                    }
-                                    res.send({
-                                        sc: RETURN_CODE.SUCCESS,
-                                        sm: 'Successfully get documents',
-                                        uds: [],
-                                        dds: docs
-                                    });
-                                }
-                            });
-}
-]);
+                    cb(null, items);
+                }
+            });
+        },
+        function(items, cb) {
+             db.collection('doc_revisions', function(err, revisions) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    cb(null, revisions, items);
+                }
+            });
+        },
+        function(revisions, items, cb) {
+            totalResults = items.length;
+            items.forEach(function(doc) {
+                revisions.findOne({url: doc.url, locale: locale, latest: true, deletedDate: ''}, function(err, revision) {
+                    if (err) {
+                        res.send({
+                            sc: RETURN_CODE.UNKNOWN_ERR,
+                            sm: 'Unknown error has occurred'
+                        });
+                    } else {
+                        if (revision) {
+                            cb(null, doc, revision);
+                        }
+                    }                
+                });
+            });
+        },
+        function(doc, revision) {
+            var result = {};
+                result.t = revision.title;
+                result.u = doc.url;
+                result.tp = doc.docType;
+                result.pu = doc.parentDocumentUrl;
+                result.up = { // TODO with permissions
+                    v: true,
+                    m: true,
+                    a: true,
+                    d: true,
+                    ad: true,
+                };
+                result.c = doc.hasChild;
+                results.push(result);
+            processedResults++;
+            if (processedResults === totalResults) {
+                res.send({
+                    sc: RETURN_CODE.SUCCESS,
+                    sm: 'Successfully get documents',
+                    uds: [],
+                    dds: results
+                });
+            }
+        }
+    ]);
 };
 
 exports.saveDocument = function(req, res) {
     console.log('saveDocument', req.body);
     var input = req.body;
-    var newDoc, url, locale, version, docBase;
-    if ('em' in input && 'u' in input && 't' in input && 'c' in input && 'l' in input && 'is' in input && 'db' in input && 'v' in input) {
+    var newRevision, url, locale, version, docBase;
+    if ('em' in input && 'u' in input && 't' in input && 'c' in input && 'l' in input && 'is' in input && 'db' in input) {
+        // TODO : user validation
         docBase = input.db;
         url = input.u;
-        version = String(input.v);
         locale = input.l.toLowerCase();
     } else {
         res.send({
@@ -150,31 +191,30 @@ exports.saveDocument = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collections('docs', function(err, collection) {
+            db.collection('doc_revisions', function(err, revisions) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'});
                 } else {
-                    cb(null, collection);
+                    cb(null, revisions);
                 }
             });
         },
-        function(collection, cb) {
-            collection.findOne({url: url, locale: locale, version: version, deletedDate: ''}, function(err, oldDoc) {
-                if (oldDoc) {
-                    newDoc = cloneDoc(oldDoc);
-                    newDoc.latest = true;
-                    newDoc.title = input.t;
-                    newDoc.content = input.c;
-                    newDoc.fileIds = input.is;
+        function(revisions, cb) {
+            revisions.findOne({url: url, locale: locale, deletedDate: '', latest: true}, function(err, oldRevision) {
+                if (oldRevision) {
+                    newRevision = cloneDoc(oldRevision);
+                    newRevision.latest = true;
+                    newRevision.title = input.t;
+                    newRevision.content = input.c;
+                    newRevision.fileIds = input.is;
                     var now = new Date();
-                    newDoc.createdDate = now.toUTCString();
-                    newDoc.createdUserName = input.em.substring(0, input.em.indexOf('@'));
-                    var newVersion = Number(newDoc.version) + 1;
-                    newDoc.version = String(newVersion);
-                    collection.update({ _id: oldDoc._id }, { $set: { latest : false } });
-                    cb(null, collection);
+                    newRevision.createdDate = now.toUTCString();
+                    newRevision.authorName = input.em.substring(0, input.em.indexOf('@'));
+                    var newVersion = Number(newRevision.version) + 1;
+                    newRevision.version = String(newVersion);
+                    cb(null, revisions, oldRevision);
                 } else {
                     res.send({
                         sc: RETURN_CODE.CANNOT_FIND_DOC,
@@ -183,8 +223,9 @@ exports.saveDocument = function(req, res) {
                 }
             });
         },
-        function(collection, cb) {
-            collection.insert(newDoc, {}, function(err, result) {
+        function(revisions, oldRevision, cb) {
+            revisions.update({ _id: oldRevision._id }, { $set: { latest : false } });
+            revisions.insert(newRevision, {}, function(err, result) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
@@ -197,8 +238,8 @@ exports.saveDocument = function(req, res) {
                     });
                 }
             });
-        }        
-        ]);
+        }
+    ]);
 };
 
 exports.getDocument = function(req, res) {
@@ -208,6 +249,7 @@ exports.getDocument = function(req, res) {
     var breadcrumbDocumentTitles = [];
     var input = req.body;
     if ('em' in input && 'u' in input && 'db' in input && 'v' in input && 'l' in input) {
+        // TODO : user validation
         email = input.em;
         url = input.u;
         docBase = input.db;
@@ -221,21 +263,21 @@ exports.getDocument = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collections('docs', function(err, collection) {
+            db.collection('docs', function(err, docs) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
-                    cb(null, collection);
+                    cb(null, docs);
                 }
             });
         },
-        function(collection, cb) {
-            collection.findOne({url: url, locale:locale, docBase:docBase, version:version, deletedDate: ''}, function(err, doc) {
+        function(docs, cb) {
+            docs.findOne({url: url, locale:locale, docBase:docBase, version:version, deletedDate: ''}, function(err, doc) {
                 if (doc) {
-                    cb(null, collection, doc);
+                    cb(null, doc);
                 } else {
                     res.send({
                         sc: RETURN_CODE.CANNOT_FIND_DOC,
@@ -256,18 +298,44 @@ exports.getDocument = function(req, res) {
                 breadcrumbDocumentTitles.sort(function(a, b) {
                     return a.left - b.left;
                 });
-                res.send({
-                    sc: RETURN_CODE.SUCCESS,
-                    sm: 'Successfully get document',
-                    t: doc.title,
-                    c: doc.content,
-                    v: doc.version,
-                    md: doc.createdDate,
-                    mun: doc.createdUserName,
-                    mui: doc.createdUserId,
-                    bu: breadcrumbDocumentUrls,
-                    bt: breadcrumbDocumentTitles
-                });
+            });
+        },
+        function(cb) {
+            db.collection('doc_revisions', function(err, revisions) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    cb(null, revisions);
+                }
+            });
+        },
+        function(revisions, cb) {
+            revisions.findOne({url: url, locale:locale, docBase:docBase, version:version, deletedDate: ''}, function(err, revision) {
+                if (revision) {
+                    cb(null, revision);
+                } else {
+                    res.send({
+                        sc: RETURN_CODE.CANNOT_FIND_REVISION,
+                        sm: 'Cannot find a revision'
+                    });
+                }
+            });
+        },
+        function(revision, cb) {
+            res.send({
+                sc: RETURN_CODE.SUCCESS,
+                sm: 'Successfully get document',
+                t: revision.title,
+                c: revision.content,
+                v: revision.version,
+                md: revision.createdDate,
+                mun: revision.authorName,
+                mui: revision.authorId,
+                bu: breadcrumbDocumentUrls,
+                bt: breadcrumbDocumentTitles
             });
         }
     ]);
@@ -277,25 +345,30 @@ exports.createDocument = function(req, res) {
     console.log('Create Document : ', req.body);
     var input = req.body;
     var newDoc = {};
-    var docBase;
+    var newRevision = {};
     if ('em' in input && 'db' in input && 't' in input && 'l' in input && 'u' in input && 'pu' in input) {
-        docBase = input.db;
+        // TODO : user validation
         newDoc.docBase = input.db;
-        newDoc.title = input.t;
-        newDoc.content = 'just created';
-        newDoc.locale = input.l.toLowerCase();
+        newDoc.docType = DOC_TYPE.DOCUMENT;
         newDoc.url = input.u;
-        newDoc.version = String(0);
-        newDoc.fileIds = [];
+        newDoc.authorName = input.em.substring(0, input.em.indexOf('@')); // TODO
+        newDoc.authorId = 'todo'; // TODO
         newDoc.parentDocumentUrl = input.pu;
         newDoc.hasChild = false;
         var now = new Date();
         newDoc.createdDate = now.toUTCString();
         newDoc.deletedDate = '';
-        newDoc.createdUserName = input.em.substring(0, input.em.indexOf('@'));
-        newDoc.createdUserId = 'todo';
-        newDoc.latest = true;
-        newDoc.documentType = 0;
+        newDoc.fileIds = [];
+
+        newRevision.url = input.u;
+        newRevision.authorId = 'todo'; // TODO
+        newRevision.title = input.t;
+        newRevision.content = 'just created';
+        newRevision.locale = input.l.toLowerCase();
+        newRevision.version = String(0);
+        newRevision.latest = true;
+        newRevision.createdDate = now.toUTCString();
+        newRevision.deletedDate = '';
     } else {
         res.send({
             sc: RETURN_CODE.INVALID_PARAM,
@@ -304,21 +377,33 @@ exports.createDocument = function(req, res) {
     }    
     async.waterfall([
         function(cb) {
-            db.collections('docs', function(err, collection) {
+            db.collection('docs', function(err, docs) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
-                    cb(null, err, collection);
+                    cb(null, docs);
                 }
             });
         },
-        function(err, collection, cb) {
-            collection.findOne({url: newDoc.url, locale: newDoc.locale, deletedDate: ''}, function(err, item) {
+        function(docs, cb) {
+            db.collection('doc_revisions', function(err, revisions) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    cb(null, docs, revisions);
+                }
+            });
+        },
+        function(docs, revisions, cb) {
+            docs.findOne({url: newDoc.url, docBase: newDoc.docBase, deletedDate: ''}, function(err, item) {
                 if (!item) {
-                    cb(null, err, collection);
+                    cb(null, docs, revisions);
                 } else {
                     res.send({
                         sc: RETURN_CODE.DOCUMENT_URL_ALREADY_EXIST,
@@ -327,73 +412,63 @@ exports.createDocument = function(req, res) {
                 }
             });
         },
-        function(err, collection, cb) {
-            collection.findOne({url: newDoc.parentDocumentUrl, locale: newDoc.locale, deletedDate: ''}, function(err, parent) {
+        function(docs, revisions, cb) {
+            docs.findOne({url: newDoc.parentDocumentUrl, docBase: newDoc.docBase, deletedDate: ''}, function(err, parent) {
                 if (parent) {
+                    console.log('found parent document');
                     // make room to insert
-                    collection.find({right:{'$gte' : parent.right}}).toArray(function (err, items) {
+                    docs.find({right:{'$gte' : parent.right}}).toArray(function (err, items) {
                         items.forEach(function (elem) {
-                            collection.update({ _id : elem._id }, { $set: {right : elem.right + 2} });
+                            docs.update({ _id : elem._id }, { $set: {right : elem.right + 2} });
                         });
                     });
-                    collection.find({left:{'$gte' : parent.right}}).toArray(function (err, items) {
+                    docs.find({left:{'$gte' : parent.right}}).toArray(function (err, items) {
                         items.forEach(function (elem) {
-                            collection.update({ _id : elem._id }, { $set: {right : elem.right + 2} });
+                            docs.update({ _id : elem._id }, { $set: {right : elem.right + 2} });
                         });
                     });
                     newDoc.left = parent.right;
                     newDoc.right = parent.right + 1;
                     // mark hasChild of parent document
-                    collection.update({ url: newDoc.parentDocumentUrl }, { $set: { hasChild: true } });
+                    docs.update({ url: newDoc.parentDocumentUrl }, { $set: { hasChild: true } });
                 } else {
                     newDoc.left = 1;
                     newDoc.right = 2;
                 }
-                cb(null, collection, parent);
+                cb(null, docs, revisions);
             });
-},
-function(collection, parent, cb) {
-    if (parent) {
-        newDoc.breadcrumbDocumentUrls = [];
-        newDoc.breadcrumbDocumentTitles = [];
-        collection.find({left: {'$lte': parent.left}, right: {'$gte':parent.right}, latest: true, deletedDate: ''}).toArray(function (err, items) {
-            for (var i = 0; i < items.length; i++) {
-                newDoc.breadcrumbDocumentUrls.push(items[i].url);
-                newDoc.breadcrumbDocumentTitles.push(items[i].title);
-            }
-            newDoc.breadcrumbDocumentUrls.push(newDoc.url);
-            newDoc.breadcrumbDocumentTitles.push(newDoc.title);
-            newDoc.breadcrumbDocumentUrls.sort(function(a, b) {
-                return a.left - b.left;
+        },
+        function(docs, revisions, cb) {
+            docs.insert(newDoc, {}, function(err, resultDoc) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    cb(null, revisions, resultDoc);
+                }
             });
-            newDoc.breadcrumbDocumentTitles.sort(function(a, b) {
-                return a.left - b.left;
-            });
-            cb(null, collection);
-        });
-    } else {
-        cb(null, collection);
-    }
-},
-function(collection, cb) {
-    collection.insert(newDoc, {}, function(err, result) {
-        if (err) {
-            res.send({
-                sc: RETURN_CODE.UNKNOWN_ERR,
-                sm: 'Unknown error has occurred'
-            });
-        } else {
-            res.send({
-                sc:RETURN_CODE.SUCCESS,
-                sm: 'Successfully created',
-                u: result[0].url,
-                t: result[0].title,
-                pu: result[0].parentDocumentUrl
-            });
+        },
+        function(revisions, resultDoc, cb) {
+            revisions.insert(newRevision, {}, function (err, resultRevision) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    res.send({
+                        sc:RETURN_CODE.SUCCESS,
+                        sm: 'Successfully created',
+                        u: resultRevision[0].url,
+                        t: resultRevision[0].title,
+                        pu: resultDoc[0].parentDocumentUrl
+                    });
+                }
+            })
         }
-    });
-}
-]);
+    ]);
 }
 
 exports.checkoutDocumentUrl = function(req, res) {
@@ -401,6 +476,7 @@ exports.checkoutDocumentUrl = function(req, res) {
     var email, url, docBase;
     var input = req.body;
     if ('em' in input && 'u' in input && 'db' in input) {
+        // TODO : user validation
         email = input.em;
         url = input.u;
         docBase = input.db;
@@ -412,7 +488,7 @@ exports.checkoutDocumentUrl = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collections('docs', function(err, collection) {
+            db.collection('docs', function(err, collection) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
@@ -446,6 +522,7 @@ exports.deleteDocument = function(req, res) {
     var email, url, docBase;
     var input = req.body;
     if ('em' in input && 'u' in input && 'db' in input) {
+        // TODO : user validation
         email = input.em;
         url = input.u;
         docBase = input.db;
@@ -457,21 +534,33 @@ exports.deleteDocument = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collections('docs', function(err, collection) {
+            db.collection('docs', function(err, docs) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
-                    cb(null, collection);
+                    cb(null, docs);
                 }
             });
         },
-        function(collection, cb) {
-            collection.findOne({url: url, docBase: docBase, deletedDate: ''}, function(err, doc) {
+        function(docs, cb) {
+            db.collection('doc_revisions', function(err, revisions) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    cb(null, docs, revisions);
+                }
+            });
+        },
+        function(docs, revisions, cb) {
+            docs.findOne({url: url, docBase: docBase, deletedDate: ''}, function(err, doc) {
                 if (doc) {
-                    cb(null, collection, doc);
+                    cb(null, docs, revisions, doc);
                 } else {
                     res.send({
                         sc: RETURN_CODE.CANNOT_FIND_DOC,
@@ -480,19 +569,20 @@ exports.deleteDocument = function(req, res) {
                 }
             });
         },
-        function(collection, doc, cb) {
+        function(docs, revisions, doc, cb) {
             var now = new Date();
             var deletedDate = now.toUTCString();
-            collection.find({left: {'$gte': doc.left}, right: {'$lte':doc.right}, deletedDate: ''}).toArray(function(err, items) {
+            docs.find({left: {'$gte': doc.left}, right: {'$lte':doc.right}, deletedDate: ''}).toArray(function(err, items) {
                 for (var i = 0; i < items.length; i++) {
-                    collection.update({_id: items[i]._id},{$set: {deletedDate: deletedDate}});
+                    docs.update({_id: items[i]._id},{$set: {deletedDate: deletedDate}});
+                    revisions.update({url: items[i].url},{$set: {deletedDate: deletedDate}});
                 }
                 res.send({
                     sc: RETURN_CODE.SUCCESS,
                     sm: 'Successfully Deleted'
                 });
             });
-        }
+        },
     ]);
 }
 
@@ -501,6 +591,7 @@ exports.getDocumentHistory = function(req, res) {
     var email, url, docBase, locale, startPosition, length;
     var input = req.body;
     if ('em' in input && 'u' in input && 'db' in input && 'l' in input && 'le' in input && 's' in input) {
+        // TODO : user validation
         email = input.em;
         url = input.u;
         docBase = input.db;
@@ -515,43 +606,42 @@ exports.getDocumentHistory = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collections('docs', function(err, collection) {
+            db.collection('doc_revisions', function(err, revisions) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
                         sm: 'Unknown error has occurred'
                     });
                 } else {
-                    cb(null, collection);
+                    cb(null, revisions);
                 }
             });
         },
-        function(collection, cb) {
-            collection.find({url: url}).toArray(function(err, items) {
-                items.sort(function(a, b) {
+        function(revisions, cb) {
+            revisions.find({url: url, locale: locale}).toArray(function(err, revisions) {
+                revisions.sort(function(a, b) {
                     return a.version - b.version;
                 });
 
-                if (items.length < startPosition) {
+                if (revisions.length < startPosition) {
                     res.send({
                         sc: RETURN_CODE.INVALID_PARAM,
                         sm: 'Invalid parameter'
                     });
                 } else {
-                    var docs = [];
-                    for(var i = startPosition; i < items.length; i++) {
-                        var doc = {};
-                        doc.t = items[i].title;
-                        doc.v = items[i].version;
-                        doc.n = items[i].createdUserName;
-                        console.log(items[i].createdUserName);
-                        doc.m = items[i].createdDate;
-                        docs.push(doc);
+                    var results = [];
+                    for(var i = startPosition; i < revisions.length; i++) {
+                        var result = {};
+                        result.t = revisions[i].title;
+                        result.v = revisions[i].version;
+                        result.n = revisions[i].authorName;
+                        result.m = revisions[i].createdDate;
+                        results.push(result);
                     }
                     res.send({
                         sc: RETURN_CODE.SUCCESS,
                         sm: 'Successfully get document history',
-                        vs: docs
+                        vs: results
                     });
                 }
             });
