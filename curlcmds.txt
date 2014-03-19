@@ -38,3 +38,10 @@ curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org"
 
 getDocumentHistory
 curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan", "db":"test", "l":"enUS", "s":0, "le":10}' http://localhost:3000/getDocumentHistory
+
+
+---
+renameDocument
+--
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan", "db":"docs", "l":"enUS", "t":"Title Changing"}' http://localhost:3000/renameDocument
+---

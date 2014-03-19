@@ -558,3 +558,154 @@ exports.getDocumentHistory = function(req, res) {
         }
     ]);
 }
+
+/**
+ * Changing document title
+ * 
+ * @param req.body -
+         {
+            em : string - user email
+            db : string - document base
+            u : string - document url
+            l : string - locale
+            t : string - document title
+         }
+ * @param res -
+         {
+            sc : number - status code
+            sm : string - status message
+         }
+
+ * @author Gyeongseok.Seo <gseok.seo@webida.org>
+ * @since: 2014.03.18
+ */
+exports.renameDocument = function(req, res) {
+    console.log('renameDocument : ', req.body);
+    var email, docBase, url, locale, title;
+    var input = req.body;
+
+    // check request param
+    if ('em' in input && 'db' in input && 'u' in input && 'l' in input && 't' in input) {
+        email = input.em;
+        docBase = input.db;
+        url = input.u;
+        locale = input.l.toLowerCase();
+        title = input.t;
+    } else {
+        res.send({
+            sc: RETURN_CODE.INVALID_PARAM,
+            sm: 'Invalid parameter'
+        });
+    }
+
+    // rename document
+    async.waterfall([
+        function(cb) {
+            db.collection('docs', function(err, collection) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    cb(null, collection);
+                }
+            });
+        },
+        function(collection, cb) {
+            var dCollection = collection; // 'doc' collection
+            var rCollection = null; // 'doc_revisions' collection
+            db.collection('doc_revisions', function(err, collection) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    rCollection = collection;
+                    cb(null, dCollection, rCollection);
+                }
+            });
+        },
+        function(dCollection, rCollection, cb) {
+            // find document in 'doc' collection
+            dCollection.findOne({url: url, docBase: docBase}, function(err, doc) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    if (doc) {
+                        cb(null, rCollection, doc);
+                    } else {
+                        res.send({
+                            sc: RETURN_CODE.CANNOT_FIND_DOC,
+                            sm: 'Cannot find a document'
+                        });
+                    }
+                }
+            });
+        },
+        function(rCollection, doc, cb) {
+            // find last revisions document in 'doc_revisions' collection
+            var query = {
+                url: doc.url,
+                authorId: doc.authorId,
+                locale: locale,
+                latest: true
+            };
+
+            rCollection.find(query).toArray(function(err, docs) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    if (docs && docs.length === 1) {
+                        var newDoc;
+                        var latestDoc = docs[0];
+                        var newVersion = Number(docs[0].version) + 1;
+
+                        if (latestDoc) {
+                            newDoc.title = title;
+                            newDoc.version = String(newVersion);
+                            newDoc.doc_id = latestDoc.doc_id;
+                            newDoc.authorId = latestDoc.authorId;
+                            newDoc.contents = latestDoc.contents;
+                            newDoc.locale = latestDoc.locale;
+                            newDoc.created_date = latestDoc.created_date;
+                            newDoc.deleted_date = latestDoc.deleted_date;
+                            newDoc.latest = true;
+                        }
+
+                        rCollection.update({ _id: latestDoc._id }, { $set: { latest : false } });
+                        cb(null, rCollection, newDoc);
+                    } else {
+                        res.send({
+                            sc: RETURN_CODE.UNKNOWN_ERR,
+                            sm: 'Unknown error has occurred'
+                        });
+                    }
+                }
+            });
+        },
+        function(rCollection, newDoc) {
+            // title change revision insert
+            rCollection.insert(newDoc, {}, function(err, result) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    res.send({
+                        sc: RETURN_CODE.SUCCESS,
+                        sm: 'Successfully title changing'
+                    });
+                }
+            });
+        }
+    ]);
+}
