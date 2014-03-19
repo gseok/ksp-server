@@ -32,7 +32,10 @@ var DOC_TYPE = {
 
 
 function cloneDoc(doc) {
-    return JSON.parse(JSON.stringify(doc));
+    var clone = JSON.parse(JSON.stringify(doc));
+    var tobeDeleted = clone._id;
+    delete clone._id;
+    return clone;
 }
 
 // tree algorithm : http://www.sitepoint.com/hierarchical-data-database
@@ -754,7 +757,7 @@ exports.renameDocument = function(req, res) {
                     });
                 } else {
                     if (docs && docs.length === 1) {
-                        var newDoc;
+                        var newDoc = {};
                         var latestDoc = docs[0];
                         var newVersion = Number(docs[0].version) + 1;
 
