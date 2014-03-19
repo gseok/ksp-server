@@ -54,7 +54,7 @@ exports.getDocumentTree = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection(docBase, function(err, collection) {
+            db.collections('docs', function(err, collection) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
@@ -150,7 +150,7 @@ exports.saveDocument = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection(docBase, function(err, collection) {
+            db.collections('docs', function(err, collection) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
@@ -221,7 +221,7 @@ exports.getDocument = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection(docBase, function(err, collection) {
+            db.collections('docs', function(err, collection) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
@@ -304,7 +304,7 @@ exports.createDocument = function(req, res) {
     }    
     async.waterfall([
         function(cb) {
-            db.collection(docBase, function(err, collection) {
+            db.collections('docs', function(err, collection) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
@@ -412,7 +412,7 @@ exports.checkoutDocumentUrl = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection(docBase, function(err, collection) {
+            db.collections('docs', function(err, collection) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
@@ -457,7 +457,7 @@ exports.deleteDocument = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection(docBase, function(err, collection) {
+            db.collections('docs', function(err, collection) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,
@@ -515,7 +515,7 @@ exports.getDocumentHistory = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection(docBase, function(err, collection) {
+            db.collections('docs', function(err, collection) {
                 if (err) {
                     res.send({
                         sc: RETURN_CODE.UNKNOWN_ERR,

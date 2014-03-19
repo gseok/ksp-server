@@ -1,40 +1,40 @@
 createDocument
-curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"webida document", "u":"webida", "pu":"", "l":"enUS"}' http://localhost:3000/createDocument
-curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"wikida document", "u":"webida/wikida", "pu":"webida", "l":"enUS"}' http://localhost:3000/createDocument
-curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"jugwan document", "u":"webida/jugwan", "pu":"webida", "l":"enUS"}' http://localhost:3000/createDocument
-curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"jugwan sub document 1", "u":"webida/jugwan/sub1", "pu":"webida/jugwan", "l":"enUS"}' http://localhost:3000/createDocument
-curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"jugwan sub document 2", "u":"webida/jugwan/sub2", "pu":"webida/jugwan", "l":"enUS"}' http://localhost:3000/createDocument
-curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"wikida sub document 1", "u":"webida/wikida/sub1", "pu":"webida/jugwan", "l":"enUS"}' http://localhost:3000/createDocument
-curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"wikida sub document 2", "u":"webida/wikida/sub2", "pu":"webida/wikida", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "t":"webida document", "u":"webida", "pu":"", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "t":"wikida document", "u":"webida/wikida", "pu":"webida", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "t":"jugwan document", "u":"webida/jugwan", "pu":"webida", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "t":"jugwan sub document 1", "u":"webida/jugwan/sub1", "pu":"webida/jugwan", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "t":"jugwan sub document 2", "u":"webida/jugwan/sub2", "pu":"webida/jugwan", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "t":"wikida sub document 1", "u":"webida/wikida/sub1", "pu":"webida/jugwan", "l":"enUS"}' http://localhost:3000/createDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "t":"wikida sub document 2", "u":"webida/wikida/sub2", "pu":"webida/wikida", "l":"enUS"}' http://localhost:3000/createDocument
 
 saveDocument
-curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"temp document", "u":"webida/jugwan", "t":"modified title", "c":"modified contents", "is":[], "l":"enUS", "v":"0"}' http://localhost:3000/saveDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "t":"temp document", "u":"webida/jugwan", "t":"modified title", "c":"modified contents", "is":[], "l":"enUS", "v":"0"}' http://localhost:3000/saveDocument
 
 getDocument
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan", "db":"test", "v":"1", "l":"enUS"}' http://localhost:3000/getDocument
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan", "db":"test", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/wikida", "db":"test", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan/sub1", "db":"test", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan/sub2", "db":"test", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/wikida/sub1", "db":"test", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/wikida/sub2", "db":"test", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan", "db":"docs", "v":"1", "l":"enUS"}' http://localhost:3000/getDocument
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan", "db":"docs", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/wikida", "db":"docs", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan/sub1", "db":"docs", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan/sub2", "db":"docs", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/wikida/sub1", "db":"docs", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/wikida/sub2", "db":"docs", "v":"0", "l":"enUS"}' http://localhost:3000/getDocument
 
 getDocumentTree
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "l":"enUS", "u":"webida", "d":"0"}' http://localhost:3000/getDocumentTree
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "l":"enUS", "u":"webida", "d":"1"}' http://localhost:3000/getDocumentTree
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "l":"enUS", "u":"webida", "d":"2"}' http://localhost:3000/getDocumentTree
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "l":"enUS", "u":"webida", "d":"3"}' http://localhost:3000/getDocumentTree
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "l":"enUS", "u":"webida", "d":"10"}' http://localhost:3000/getDocumentTree
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "l":"enUS", "u":"webida", "d":"0"}' http://localhost:3000/getDocumentTree
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "l":"enUS", "u":"webida", "d":"1"}' http://localhost:3000/getDocumentTree
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "l":"enUS", "u":"webida", "d":"2"}' http://localhost:3000/getDocumentTree
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "l":"enUS", "u":"webida", "d":"3"}' http://localhost:3000/getDocumentTree
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "l":"enUS", "u":"webida", "d":"10"}' http://localhost:3000/getDocumentTree
 
 checkoutDocumentUrl
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "u":"webida"}' http://localhost:3000/checkoutDocumentUrl
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "u":"webida/wikida"}' http://localhost:3000/checkoutDocumentUrl
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "u":"webida/jugwan"}' http://localhost:3000/checkoutDocumentUrl
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "u":"webida/jugwan/sub1"}' http://localhost:3000/checkoutDocumentUrl
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "u":"doesnt/exist/url"}' http://localhost:3000/checkoutDocumentUrl
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "u":"webida"}' http://localhost:3000/checkoutDocumentUrl
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "u":"webida/wikida"}' http://localhost:3000/checkoutDocumentUrl
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "u":"webida/jugwan"}' http://localhost:3000/checkoutDocumentUrl
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "u":"webida/jugwan/sub1"}' http://localhost:3000/checkoutDocumentUrl
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "db":"docs", "u":"doesnt/exist/url"}' http://localhost:3000/checkoutDocumentUrl
 
 deleteDocument
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan", "db":"test"}' http://localhost:3000/deleteDocument
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan", "db":"docs"}' http://localhost:3000/deleteDocument
 
 getDocumentHistory
-curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan", "db":"test", "l":"enUS", "s":0, "le":10}' http://localhost:3000/getDocumentHistory
+curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan", "db":"docs", "l":"enUS", "s":0, "le":10}' http://localhost:3000/getDocumentHistory
