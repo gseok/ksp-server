@@ -757,21 +757,14 @@ exports.renameDocument = function(req, res) {
                     });
                 } else {
                     if (docs && docs.length === 1) {
-                        var newDoc = {};
                         var latestDoc = docs[0];
-                        var newVersion = Number(docs[0].version) + 1;
+                        var newVersion = Number(latestDoc.version) + 1;
+                        var newDoc = cloneDoc(latestDoc);
 
-                        if (latestDoc) {
-                            newDoc.title = title;
-                            newDoc.version = String(newVersion);
-                            newDoc.doc_id = latestDoc.doc_id;
-                            newDoc.authorId = latestDoc.authorId;
-                            newDoc.contents = latestDoc.contents;
-                            newDoc.locale = latestDoc.locale;
-                            newDoc.created_date = latestDoc.created_date;
-                            newDoc.deleted_date = latestDoc.deleted_date;
-                            newDoc.latest = true;
-                        }
+                        // newDoc resetting
+                        newDoc.title = title;
+                        newDoc.version = String(newVersion);
+                        newDoc.latest = true;
 
                         rCollection.update({ _id: latestDoc._id }, { $set: { latest : false } });
                         cb(null, rCollection, newDoc);
@@ -802,3 +795,4 @@ exports.renameDocument = function(req, res) {
         }
     ]);
 }
+
