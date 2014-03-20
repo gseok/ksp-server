@@ -45,5 +45,13 @@ describe('API', function(){
 			req.end();
 		});
 	});
+
+	describe('/addUser', function() {
+		it('should Successfully response', function(done) {
+			[1].should.have.property('0');
+
+			done();
+		});
+	});
 });
 
