@@ -1,7 +1,11 @@
 {
+	"framework": "jasmine",
+	"src_files": [
+		"test/test*.js"
+	],
     "launchers": {
         "Mocha": {
-            "command": "mocha test/test*.js",
+            "command": "mocha test/test*.js -R tap",
             "protocol": "tap"
         }
     }
