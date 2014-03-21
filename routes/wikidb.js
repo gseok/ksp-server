@@ -59,6 +59,17 @@ function sendReturnCode(res, returnCode, returnMessage) {
     })
 }
 
+function getCollection(collectionName, cb) {
+    db.collection(collectionName, function(err, collection) {
+        if (err) {
+            sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+            return;
+        } else {
+            cb(null, collection);
+        }
+    });
+}
+
 // checker : Array of string
 // checkee : Object
 function validateInputParams(checker, checkee) {
@@ -80,14 +91,7 @@ function cloneDoc(doc) {
 function saveDoc(input, type, res) {
     async.waterfall([
         function(cb) {
-            db.collection('doc_revisions', function(err, revisions) {
-                if (err) {
-                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
-                    return;
-                } else {
-                    cb(null, revisions);
-                }
-            });
+            getCollection('doc_revisions', cb);
         },
         function(revisions, cb) {
             revisions.findOne({url: input.u, docBase: input.db, locale: input.l.toLowerCase(), deletedDate: '', latest: true}, function(err, oldRevision) {
@@ -152,14 +156,7 @@ exports.getDocumentTree = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection('docs', function(err, docs) {
-                if (err) {
-                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
-                    return;
-                } else {
-                    cb(null, docs);
-                }
-            });
+            getCollection('docs', cb);
         },
         function(docs, cb) {
             docs.findOne({url: url, docBase: docBase, deletedDate: ''}, function(err, item) {
@@ -310,7 +307,7 @@ exports.getDocument = function(req, res) {
     var totalBreadcrumb = 0;
     var currentBreadcrumb = 0;
     var input = req.body;
-    if ('em' in input && 'u' in input && 'db' in input && 'v' in input && 'l' in input) {
+    if (validateInputParams(['em', 'db', 'u', 'l', 'v'], input)) {
         // TODO : user validation
         email = input.em;
         url = input.u;
@@ -323,14 +320,7 @@ exports.getDocument = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection('docs', function(err, docs) {
-                if (err) {
-                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
-                    return;
-                } else {
-                    cb(null, docs);
-                }
-            });
+            getCollection('docs', cb);
         },
         function(docs, cb) {
             docs.findOne({url:url, docBase:docBase, deletedDate: ''}, function(err, doc) {
@@ -450,14 +440,7 @@ exports.createDocument = function(req, res) {
     }    
     async.waterfall([
         function(cb) {
-            db.collection('docs', function(err, docs) {
-                if (err) {
-                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
-                    return;
-                } else {
-                    cb(null, docs);
-                }
-            });
+            getCollection('docs', cb);
         },
         function(docs, cb) {
             db.collection('doc_revisions', function(err, revisions) {
@@ -549,14 +532,7 @@ exports.checkDocumentUrl = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection('docs', function(err, collection) {
-                if (err) {
-                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
-                    return;
-                } else {
-                    cb(null, collection);
-                }
-            });
+            getCollection('docs', cb);
         },
         function(collection, cb) {
             collection.findOne({url: url, docBase:docBase, deletedDate: ''}, function(err, doc) {
@@ -587,14 +563,7 @@ exports.deleteDocument = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection('docs', function(err, docs) {
-                if (err) {
-                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
-                    return;
-                } else {
-                    cb(null, docs);
-                }
-            });
+            getCollection('docs', cb);
         },
         function(docs, cb) {
             db.collection('doc_revisions', function(err, revisions) {
@@ -649,14 +618,7 @@ exports.getDocumentHistory = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection('doc_revisions', function(err, revisions) {
-                if (err) {
-                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
-                    return;
-                } else {
-                    cb(null, revisions);
-                }
-            });
+            getCollection('doc_revisions', cb);
         },
         function(revisions, cb) {
             revisions.find({url: url, docBase: docBase, locale: locale}).toArray(function(err, revisions) {
@@ -724,14 +686,7 @@ exports.addUser = function(req, res) {
     async.waterfall([
         function(cb) {
             // get users collection
-            db.collection('users', function(err, collection) {
-                if (err) {
-                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
-                    return;
-                } else {
-                    cb(null, collection);
-                }
-            });
+            getCollection('users', cb);
         },
         function(collection, cb) {
             // check admin user exist
@@ -837,14 +792,7 @@ exports.searchDocument = function(req, res) {
     }
     async.waterfall([
         function(cb) {
-            db.collection('docs', function(err, collection) {
-                if (err) {
-                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
-                    return;
-                } else {
-                    cb(null, collection);
-                }
-            });
+            getCollection('docs', cb);
         },
         function(collection, cb) {
             if (!keyword) {
