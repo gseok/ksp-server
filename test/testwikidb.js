@@ -20,6 +20,7 @@ describe('API', function(){
 				res.statusCode.should.equal(200);
 				res.on('data', function (data) {
 					var d = JSON.parse(data);
+					console.log(d);
 
 					d.should.be.an.instanceOf(Object).and.have.property('sm');
 					d.should.be.an.instanceOf(Object).and.have.property('sc');
@@ -54,6 +55,7 @@ describe('API', function(){
 				res.statusCode.should.equal(200);
 				res.on('data', function (data) {
 					var d = JSON.parse(data);
+					console.log(d);
 
 					d.should.be.an.instanceOf(Object).and.have.property('sm');
 					d.should.be.an.instanceOf(Object).and.have.property('sc');
