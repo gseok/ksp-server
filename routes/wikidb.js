@@ -38,6 +38,17 @@ var SAVE_TYPE = {
     SAVE: 1
 }
 
+// checker : Array of string
+// checkee : Object
+function validateInputParams(checker, checkee) {
+    for (var i = 0; i < checker.length; i++) {
+        if (!(checker[i] in checkee)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 function cloneDoc(doc) {
     var clone = JSON.parse(JSON.stringify(doc));
     var tobeDeleted = clone._id;
@@ -59,7 +70,7 @@ function saveDoc(input, type, res) {
             });
         },
         function(revisions, cb) {
-            revisions.findOne({url: input.u, locale: input.l.toLowerCase(), deletedDate: '', latest: true}, function(err, oldRevision) {
+            revisions.findOne({url: input.u, docBase: input.db, locale: input.l.toLowerCase(), deletedDate: '', latest: true}, function(err, oldRevision) {
                 if (oldRevision) {
                     newRevision = cloneDoc(oldRevision);
                     newRevision.latest = true;
@@ -111,7 +122,7 @@ exports.getDocumentTree = function(req, res) {
     var results = [];
     var totalResults = 0;
     var processedResults = 0;
-    if ('em' in input && 'db' in input && 'u' in input && 'l' in input && 'd' in input) {
+    if (validateInputParams(['em', 'db', 'u', 'l', 'd'], input)) {
         // TODO : user validation
         docBase = input.db;
         url = input.u;
@@ -163,15 +174,14 @@ exports.getDocumentTree = function(req, res) {
         },
         function(docs, item, cb) {
             var leftLimit = Number(item.left) + Number(depth);
-            var rightLimit = Number(item.right) - Number(depth);
             docs.find({
                 '$or' : [
-                {
-                    left: { '$gte': item.left, '$lte': leftLimit }
-                },
-                {
-                    right: { '$gte': rightLimit, '$lte': item.right }
-                }
+                    {
+                        left: { '$gte': item.left, '$lte': leftLimit }
+                    },
+                    {
+                        right: { '$lte': item.right }
+                    }
                 ],
                 deletedDate: ''
             }).toArray(function (err, items) {
@@ -181,6 +191,9 @@ exports.getDocumentTree = function(req, res) {
                         sm: 'Unknown error has occurred'
                     });
                 } else {
+                    items.forEach(function(item) {
+                        console.log(item.url, item.left, item.right);
+                    });
                     cb(null, items);
                 }
             });
@@ -200,7 +213,7 @@ exports.getDocumentTree = function(req, res) {
         function(revisions, items, cb) {
             totalResults = items.length;
             items.forEach(function(doc) {
-                revisions.findOne({url: doc.url, locale: locale, latest: true, deletedDate: ''}, function(err, revision) {
+                revisions.findOne({url: doc.url, docBase: docBase, locale: locale, latest: true, deletedDate: ''}, function(err, revision) {
                     if (err) {
                         res.send({
                             sc: RETURN_CODE.UNKNOWN_ERR,
@@ -246,7 +259,7 @@ exports.saveDocument = function(req, res) {
     console.log('saveDocument', req.body);
     var input = req.body;
     var newRevision, url, locale, version, docBase;
-    if ('em' in input && 'u' in input && 't' in input && 'c' in input && 'l' in input && 'is' in input && 'db' in input) {
+    if (validateInputParams(['em', 'db', 'u', 'l', 't', 'c', 'is'], input)) {
         // TODO : user validation
     } else {
         res.send({
@@ -284,7 +297,7 @@ exports.renameDocument = function(req, res) {
     var input = req.body;
 
     // check request param
-    if ('em' in input && 'db' in input && 'u' in input && 'l' in input && 't' in input) {
+    if (validateInputParams(['em', 'db', 'u', 'l', 't'], input)) {
         // TODO : user validation
     } else {
         res.send({
@@ -302,6 +315,8 @@ exports.getDocument = function(req, res) {
     var email, url, docBase, version, locale;
     var breadcrumbDocumentUrls = [];
     var breadcrumbDocumentTitles = [];
+    var totalBreadcrumb = 0;
+    var currentBreadcrumb = 0;
     var input = req.body;
     if ('em' in input && 'u' in input && 'db' in input && 'v' in input && 'l' in input) {
         // TODO : user validation
@@ -330,9 +345,9 @@ exports.getDocument = function(req, res) {
             });
         },
         function(docs, cb) {
-            docs.findOne({url: url, locale:locale, docBase:docBase, version:version, deletedDate: ''}, function(err, doc) {
+            docs.findOne({url:url, docBase:docBase, deletedDate: ''}, function(err, doc) {
                 if (doc) {
-                    cb(null, doc);
+                    cb(null, docs, doc);
                 } else {
                     res.send({
                         sc: RETURN_CODE.CANNOT_FIND_DOC,
@@ -341,21 +356,18 @@ exports.getDocument = function(req, res) {
                 }
             });
         },
-        function(collection, doc, cb) {
-            collection.find({left: {'$lte': doc.left}, right: {'$gte':doc.right}, latest: true, deletedDate: ''}).toArray(function (err, items) {
+        function(docs, doc, cb) {
+            docs.find({left: {'$lte': doc.left}, right: {'$gte':doc.right}, deletedDate: ''}).toArray(function (err, items) {
                 for (var i = 0; i < items.length; i++) {
                     breadcrumbDocumentUrls.push(items[i].url);
-                    breadcrumbDocumentTitles.push(items[i].title);
                 }
                 breadcrumbDocumentUrls.sort(function(a, b) {
                     return a.left - b.left;
                 });
-                breadcrumbDocumentTitles.sort(function(a, b) {
-                    return a.left - b.left;
-                });
+                cb(null, items);
             });
         },
-        function(cb) {
+        function(items, cb) {
             db.collection('doc_revisions', function(err, revisions) {
                 if (err) {
                     res.send({
@@ -363,12 +375,40 @@ exports.getDocument = function(req, res) {
                         sm: 'Unknown error has occurred'
                     });
                 } else {
-                    cb(null, revisions);
+                    cb(null, revisions, items);
                 }
             });
         },
+        function(revisions, items, cb) {
+            totalBreadcrumb = items.length;
+            for (var i = 0; i < items.length; i++) {
+                revisions.findOne({url: items[i].url, docBase: items[i].docBase, version: version, deletedDate: ''}, function(err, rev) {
+                    if (err) {
+                        res.send({
+                            sc: RETURN_CODE.UNKNOWN_ERR,
+                            sm: 'Unknown error has occurred'
+                        });
+                    } else {
+                        if (!rev) {
+                            res.send({
+                                sc: RETURN_CODE.CANNOT_FIND_REVISION,
+                                sm: 'Cannot find a revision'
+                            });
+                        }
+                        breadcrumbDocumentTitles.push(rev.title);
+                        currentBreadcrumb++;
+                        if (currentBreadcrumb === totalBreadcrumb) {
+                            breadcrumbDocumentTitles.sort(function(a, b) {
+                                return a.left - b.left;
+                            });
+                            cb(null, revisions);
+                        }
+                    }
+                });
+            }
+        },
         function(revisions, cb) {
-            revisions.findOne({url: url, locale:locale, docBase:docBase, version:version, deletedDate: ''}, function(err, revision) {
+            revisions.findOne({url: url, docBase: docBase, locale:locale, version:version, deletedDate: ''}, function(err, revision) {
                 if (revision) {
                     cb(null, revision);
                 } else {
@@ -401,7 +441,7 @@ exports.createDocument = function(req, res) {
     var input = req.body;
     var newDoc = {};
     var newRevision = {};
-    if ('em' in input && 'db' in input && 't' in input && 'l' in input && 'u' in input && 'pu' in input) {
+    if (validateInputParams(['em', 'db', 'u', 'l', 't', 'pu'], input)) {    
         // TODO : user validation
         newDoc.docBase = input.db;
         newDoc.docType = DOC_TYPE.DOCUMENT;
@@ -416,11 +456,12 @@ exports.createDocument = function(req, res) {
         newDoc.fileIds = [];
 
         newRevision.url = input.u;
+        newRevision.docBase = input.db;
         newRevision.authorId = 'todo'; // TODO
         newRevision.title = input.t;
         newRevision.content = 'just created';
         newRevision.locale = input.l.toLowerCase();
-        newRevision.version = String(0);
+        newRevision.version = String(1);
         newRevision.latest = true;
         newRevision.createdDate = now.toUTCString();
         newRevision.deletedDate = '';
@@ -470,7 +511,6 @@ exports.createDocument = function(req, res) {
         function(docs, revisions, cb) {
             docs.findOne({url: newDoc.parentDocumentUrl, docBase: newDoc.docBase, deletedDate: ''}, function(err, parent) {
                 if (parent) {
-                    console.log('found parent document');
                     // make room to insert
                     docs.find({right:{'$gte' : parent.right}}).toArray(function (err, items) {
                         items.forEach(function (elem) {
@@ -530,7 +570,7 @@ exports.checkDocumentUrl = function(req, res) {
     console.log('checkDocumentUrl : ', req.body);
     var email, url, docBase;
     var input = req.body;
-    if ('em' in input && 'u' in input && 'db' in input) {
+    if (validateInputParams(['em', 'db', 'u'], input)) {    
         // TODO : user validation
         email = input.em;
         url = input.u;
@@ -576,7 +616,7 @@ exports.deleteDocument = function(req, res) {
     console.log('deleteDocument : ', req.body);
     var email, url, docBase;
     var input = req.body;
-    if ('em' in input && 'u' in input && 'db' in input) {
+    if (validateInputParams(['em', 'db', 'u'], input)) {    
         // TODO : user validation
         email = input.em;
         url = input.u;
@@ -645,7 +685,7 @@ exports.getDocumentHistory = function(req, res) {
     console.log('getDocumentHistory : ', req.body);
     var email, url, docBase, locale, startPosition, length;
     var input = req.body;
-    if ('em' in input && 'u' in input && 'db' in input && 'l' in input && 'le' in input && 's' in input) {
+    if (validateInputParams(['em', 'db', 'u', 'l', 'le', 's'], input)) {    
         // TODO : user validation
         email = input.em;
         url = input.u;
@@ -673,7 +713,7 @@ exports.getDocumentHistory = function(req, res) {
             });
         },
         function(revisions, cb) {
-            revisions.find({url: url, locale: locale}).toArray(function(err, revisions) {
+            revisions.find({url: url, docBase: docBase, locale: locale}).toArray(function(err, revisions) {
                 revisions.sort(function(a, b) {
                     return a.version - b.version;
                 });
@@ -727,7 +767,7 @@ exports.addUser = function(req, res) {
     var input = req.body;
 
     // check requeset param
-    if ('em' in input && 'v' in input) {
+    if (validateInputParams(['em', 'v'], input)) {    
         email = input.em;
         value = input.v;
     } else {
@@ -845,7 +885,7 @@ exports.searchDocument = function(req, res) {
     console.log('searchDocument : ', req.body);
     var email, docBase, keyword, locale;
     var input = req.body;
-    if ('em' in input && 'db' in input && 'k' in input && 'l' in input) {
+    if (validateInputParams(['em', 'db', 'l', 'k'], input)) {    
         email = input.em;
         docBase = input.db;
         keyword = input.k;
