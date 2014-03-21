@@ -19,14 +19,14 @@ input {
 	t : string - document title
 	l : string - locale
 	u : string - document url
-	pu : number - parent document url
+	pu : string - parent document url
 }
 output {
 	sc : number - status code
 	sm : string - status message
 	i : number - document id
 	t : string - document title
-	pu : number - parent document url
+	pu : string - parent document url
 }
 
 saveDocument
@@ -36,7 +36,6 @@ input {
 	u : string - document url
 	t : string - document title
 	c : string - document contents
-	v : number - document version
 	l : string - locale
 	is : [number] - file ids
 }
@@ -81,7 +80,7 @@ output {
 		ud {
 			t : string - title
 			tp : string - document type
-			pu : number - parent document url
+			pu : string - parent document url
 			u : string - document url
 			c : boolean - has child
 			up - user permissions
@@ -96,7 +95,7 @@ output {
 		dd {
 			t : string - title
 			tp : string - document type
-			pu : number - parent document url
+			pu : string - parent document url
 			u : string - document url
 			c : boolean - has child
 			up : - user permissions
@@ -109,7 +108,7 @@ output {
 			}
 }
 
-checkoutDocumentUrl
+checkDocumentUrl
 input {
 	em : string - user email
 	db : string - document base

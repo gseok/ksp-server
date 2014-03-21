@@ -18,11 +18,12 @@ app.post('/getDocument', wikidb.getDocument);
 app.post('/createDocument', wikidb.createDocument);
 app.post('/saveDocument', wikidb.saveDocument);
 app.post('/getDocumentTree', wikidb.getDocumentTree);
-app.post('/checkoutDocumentUrl', wikidb.checkoutDocumentUrl);
+app.post('/checkDocumentUrl', wikidb.checkDocumentUrl);
 app.post('/deleteDocument', wikidb.deleteDocument);
 app.post('/getDocumentHistory', wikidb.getDocumentHistory);
 app.post('/renameDocument', wikidb.renameDocument);
 app.post('/addUser', wikidb.addUser);
+app.post('/searchDocument', wikidb.searchDocument);
 
 app.listen(3000);
 console.log('Listening on port 3000...');

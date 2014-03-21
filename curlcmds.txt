@@ -8,7 +8,7 @@ curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org"
 curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"wikida sub document 2", "u":"webida/wikida/sub2", "pu":"webida/wikida", "l":"enUS"}' http://localhost:3000/createDocument
 
 saveDocument
-curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"temp document", "u":"webida/jugwan", "t":"modified title", "c":"modified contents", "is":[], "l":"enUS", "v":"0"}' http://localhost:3000/saveDocument
+curl -i -X POST -H 'Content-Type:application/json' -d '{"em":"jugwan@webida.org", "db":"test", "t":"temp document", "u":"webida/jugwan", "t":"modified title", "c":"modified contents", "is":[], "l":"enUS"}' http://localhost:3000/saveDocument
 
 getDocument
 curl -i -X POST -H 'content-type:application/json' -d '{"em":"jugwan@webida.org", "u":"webida/jugwan", "db":"test", "v":"1", "l":"enUS"}' http://localhost:3000/getDocument
