@@ -840,3 +840,135 @@ exports.addUser = function(req, res) {
         }
     ]); // close async.waterfall
 }
+
+exports.searchDocument = function(req, res) {
+    console.log('searchDocument : ', req.body);
+    var email, docBase, keyword, locale;
+    var input = req.body;
+    if ('em' in input && 'db' in input && 'k' in input && 'l' in input) {
+        email = input.em;
+        docBase = input.db;
+        keyword = input.k;
+        locale = input.l.toLowerCase();
+    } else {
+        res.send({
+            sc: 2,
+            sm: 'Invalid parameter'
+        });
+    }
+    function makeResponse(items){
+        var docs = [];
+        for(var i = 0; i < items.length; i++) {
+            var doc = {};
+            doc.u = items[i].url;
+            doc.t = items[i].title;
+            doc.c = items[i].content;
+            docs.push(doc);
+        }
+        
+        return docs;
+    }
+    async.waterfall([
+        function(cb) {
+            db.collection('docs', function(err, collection) {
+                if (err) {
+                    res.send({
+                        sc: 1,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    cb(null, collection);
+                }
+            });
+        },
+        function(collection, cb) {
+            if (!keyword) {
+                collection.find().toArray(function(err, items){
+                    var docs = makeResponse(items);
+                    res.send({
+                        items:items,
+                        sc: 0,
+                        sm: 'Successfully get document history',
+                        t:docs.length,
+                        vs: docs
+                    });
+                });
+            } else {
+                var splitKeyword = keyword.split(' ');
+                var findArray = [];
+                for(var i=0; i<splitKeyword.length; i++ ){
+                    var key = splitKeyword[i];
+                    var set = [];
+                    
+                    if(key) {
+                        set.push({'content' :{$regex: key, $options:'x' }});
+                        set.push({'title' :{$regex: key, $options:'x' }});
+                        set.push({'url' :{$regex: key, $options:'x' }});
+                        findArray.push({$or : set});
+                    }
+                }
+
+                collection.find( {$and:findArray} ).toArray(function(err, items){
+
+                    if (err) {
+                        res.send({
+                            sc: 1,
+                            sm: 'Unknown error has occurred'
+                        });
+                    } else {
+                        cb(null, collection, items, findArray);
+                    }
+                });
+            }
+        },
+        function(collection, andItems, findArray, cb) {
+            
+            function isInArray(item, array2, a) {
+
+                for(var i=0; i < array2.length; i++) {
+                    if(item.url === array2[i].url && item.docBase === array2[i].docBase) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            function removeArrayDuplicate(array, array2) {
+                
+                var ret = [];
+                
+                for(var i=0; i <array.length; i++){
+                    
+                    if (isInArray(array[i], array2, i) === false) {
+                        ret.push(array[i]);
+                    }
+                }
+                
+                return ret;
+            }
+            
+            collection.find( {$or:findArray}).toArray(function(err, orItems){
+                if (err) {
+                    res.send({
+                        sc: 1,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    var orItems2 = removeArrayDuplicate(orItems, andItems);
+                    var items = andItems.concat(orItems2);
+                    var docs = makeResponse(items);
+                    res.send({
+                        andItems:andItems,
+                        orItems2:orItems2,
+                        items:items,
+                        sc: 0,
+                        sm: 'Successfully get document history',
+                        t:docs.length,
+                        vs: docs
+                    });
+                }
+                
+                
+            });
+        }
+    ]);
+}

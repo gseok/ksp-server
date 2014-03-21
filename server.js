@@ -23,6 +23,7 @@ app.post('/deleteDocument', wikidb.deleteDocument);
 app.post('/getDocumentHistory', wikidb.getDocumentHistory);
 app.post('/renameDocument', wikidb.renameDocument);
 app.post('/addUser', wikidb.addUser);
+app.post('/searchDocument', wikidb.searchDocument);
 
 app.listen(3000);
 console.log('Listening on port 3000...');
