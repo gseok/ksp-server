@@ -20,7 +20,9 @@ var RETURN_CODE = {
     INVALID_PARAM: 2,
     CANNOT_FIND_DOC: 3,
     DOCUMENT_URL_ALREADY_EXIST: 4,
-    CANNOT_FIND_REVISION: 5
+    CANNOT_FIND_REVISION: 5,
+    USER_ALREADY_EXIST: 6,
+    CANNOT_FIND_USER: 7
 };
 
 // Document type
@@ -796,3 +798,139 @@ exports.renameDocument = function(req, res) {
     ]);
 }
 
+/**
+ * Add new user
+ * 
+ * @param req.body -
+        {
+            em : string - admin's email
+            v : string - value - user email
+        }
+ * @param res -
+         {
+            sc : number - status code
+            sm : string - status message
+         }
+
+ * @author Gyeongseok.Seo <gseok.seo@webida.org>
+ * @since: 2014.03.21
+ */
+exports.addUser = function(req, res) {
+    console.log('addUser : ',  req.body);
+    var email, value;
+    var input = req.body;
+
+    // check requeset param
+    if ('em' in input && 'v' in input) {
+        email = input.em;
+        value = input.v;
+    } else {
+        res.send({
+            sc: RETURN_CODE.INVALID_PARAM,
+            sm: 'Invalid parameter'
+        });
+    }
+
+    // add user
+    async.waterfall([
+        function(cb) {
+            // get users collection
+            db.collection('users', function(err, collection) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    cb(null, collection);
+                }
+            });
+        },
+        function(collection, cb) {
+            // check admin user exist
+            var query = {
+                email: email
+            };
+
+            collection.find(query).toArray(function(err, docs) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    if (!docs || docs.length < 1) {
+                        // not exist
+                        res.send({
+                            sc: RETURN_CODE.CANNOT_FIND_USER,
+                            sm: '"' + email + '" user not exist'
+                        });
+                    } else {
+                        // exist
+                        cb(null, collection);
+                    }
+                }
+            });            
+        },
+        function(collection, cb) {
+            // check admin user permissions
+            // TODO: implement admin user permissions check logic
+            cb(null, collection);
+        },
+        function(collection, cb) {
+            // check already exist user
+            var query = {
+                email: value
+            };
+
+            collection.find(query).toArray(function(err, docs) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    if (docs && docs.length > 0) {
+                        // already exist
+                        res.end({
+                            sc: RETURN_CODE.USER_ALREADY_EXIST,
+                            sm: '"' + value + '" user already exist'
+                        });
+                    } else {
+                        // not exist
+                        cb(null, collection);
+                    }
+                }
+            });
+        },
+        function(collection, cb) {
+            // add user
+            var user = {};
+
+            // create new user docuemnt
+            // TODO: need to user 'name' and 'locale' assign logic
+            user.email = value;
+            user.name = '';
+            user.locale = '';
+            var now = new Date().toUTCString();
+            user.createdDate = now;
+            user.updatedDate = now;
+            user.deletedDate = '';
+
+            // add new user
+            collection.insert(user, {}, function(err, result) {
+                if (err) {
+                    res.send({
+                        sc: RETURN_CODE.UNKNOWN_ERR,
+                        sm: 'Unknown error has occurred'
+                    });
+                } else {
+                    res.send({
+                        sc: RETURN_CODE.SUCCESS,
+                        sm: 'Successfully add new user'
+                    });
+                }
+            });
+        }
+    ]); // close async.waterfall
+}

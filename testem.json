@@ -1,7 +1,8 @@
 {
 	"framework": "jasmine",
 	"src_files": [
-		"test/test*.js"
+		"test/test*.js",
+		"routes/*.js"
 	],
     "launchers": {
         "Mocha": {
