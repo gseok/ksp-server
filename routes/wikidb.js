@@ -1,6 +1,7 @@
 // db and library setting
 var mongo = require('mongodb');
 var async = require('async');
+var util = require('./commonUtils');
 var Server = mongo.Server,
 Db = mongo.Db,
 BSON = mongo.BSONPure;
@@ -21,7 +22,9 @@ var RETURN_CODE = {
     DOCUMENT_URL_ALREADY_EXIST: 4,
     CANNOT_FIND_REVISION: 5,
     USER_ALREADY_EXIST: 6,
-    CANNOT_FIND_USER: 7
+    CANNOT_FIND_USER: 7,
+    CANNOT_FIND_USER_ROLE_MAP: 8,
+    CANNOT_FIND_PERMISSIONS: 9
 };
 
 // Return Message
@@ -33,7 +36,9 @@ var RETURN_MESSAGE = {
     4: 'Document url already exist',
     5: 'Cannot find a revision',
     6: 'User already exist',
-    7: 'Cannot find a user'
+    7: 'Cannot find a user',
+    8: 'Cannot find user role map',
+    9: 'Cannot find permissions'
 };
 
 // Document type
@@ -51,8 +56,9 @@ var SAVE_TYPE = {
 
 function sendReturnCode(res, returnCode, returnMessage) {
     if (!returnMessage) {
-        returnMessage = RETURN_MESSAGE.returnCode;
+        returnMessage = RETURN_MESSAGE[returnCode];
     }
+    console.log(returnMessage);
     res.send({
         sc: returnCode,
         sm: returnMessage
@@ -70,6 +76,17 @@ function getCollection(collectionName, cb) {
     });
 }
 
+function getCollectionWithParam(collectionName, param, cb) {
+    db.collection(collectionName, function(err, collection) {
+        if (err) {
+            sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+            return;
+        } else {
+            cb(null, collection, param);
+        }
+    });
+}
+
 // checker : Array of string
 // checkee : Object
 function validateInputParams(checker, checkee) {
@@ -81,13 +98,6 @@ function validateInputParams(checker, checkee) {
     return true;
 }
 
-function cloneDoc(doc) {
-    var clone = JSON.parse(JSON.stringify(doc));
-    var tobeDeleted = clone._id;
-    delete clone._id;
-    return clone;
-}
-
 function saveDoc(input, type, res) {
     async.waterfall([
         function(cb) {
@@ -96,7 +106,7 @@ function saveDoc(input, type, res) {
         function(revisions, cb) {
             revisions.findOne({url: input.u, docBase: input.db, locale: input.l.toLowerCase(), deletedDate: '', latest: true}, function(err, oldRevision) {
                 if (oldRevision) {
-                    newRevision = cloneDoc(oldRevision);
+                    newRevision = util.cloneDoc(oldRevision);
                     newRevision.latest = true;
                     var now = new Date();
                     newRevision.createdDate = now.toUTCString();
@@ -112,7 +122,7 @@ function saveDoc(input, type, res) {
                     }
                     cb(null, revisions, oldRevision);
                 } else {
-                    sendReturnCode(RETURN_CODE.CANNOT_FIND_DOC);
+                    sendReturnCode(res, RETURN_CODE.CANNOT_FIND_DOC);
                     return;
                 }
             });
@@ -284,7 +294,7 @@ exports.saveDocument = function(req, res) {
  * @since: 2014.03.18
  */
 exports.renameDocument = function(req, res) {
-    console.log('renameDocument : ', req.body);
+    console.log('renameDocument : \n', req.body);
     var input = req.body;
 
     // check request param
@@ -669,7 +679,7 @@ exports.getDocumentHistory = function(req, res) {
  * @since: 2014.03.21
  */
 exports.addUser = function(req, res) {
-    console.log('addUser : ',  req.body);
+    console.log('addUser : \n',  req.body);
     var email, value;
     var input = req.body;
 
@@ -704,16 +714,85 @@ exports.addUser = function(req, res) {
                         sendReturnCode(res, RETURN_CODE.CANNOT_FIND_USER, '"' + email + '" user not exist');
                         return;
                     } else {
+                        // TODO: docs length just one?
                         // exist
-                        cb(null, collection);
+                        cb(null, collection, docs[0]);
                     }
                 }
             });            
         },
-        function(collection, cb) {
-            // check admin user permissions
-            // TODO: implement admin user permissions check logic
-            cb(null, collection);
+        function(collection, doc, cb) {
+            // get user_role_map collection
+            var param = {
+                uCollection: collection,
+                adminID: doc._id
+            };
+
+            getCollectionWithParam('user_role_map', param, cb);
+        },
+        function(collection, param, cb) {
+            var query = {
+                userID: param.adminID.toString()
+            };
+
+            // find roles id
+            collection.find(query).toArray(function(err, docs) {
+                if (err) {
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
+                } else {
+                    if (!docs || docs.length < 1) {
+                        // not exist
+                        sendReturnCode(res, RETURN_CODE.CANNOT_FIND_USER_ROLE_MAP);
+                        return;
+                    } else {
+                        // exist
+                        // get roleIDs
+                        param.roleIDs = [];
+                        for (var i = 0; i < docs.length; i++) {
+                            if(docs[i].roleID) {
+                                param.roleIDs.push(docs[i].roleID);
+                            }
+                        }
+                        getCollectionWithParam('permissions', param, cb);
+                    }
+                }    
+            });
+        },
+        function(collection, param, cb) {
+            var query = {
+                $or: []
+            };
+
+            for (var i = 0; i < param.roleIDs.length; i++) {
+                if(param.roleIDs[i]) {
+                    query.$or.push({roleID: param.roleIDs[i]});
+                }
+            }
+
+            // get perm type
+            collection.find(query).toArray(function(err, docs) {
+                if (!docs || docs.length < 1) {
+                    // not exist
+                    sendReturnCode(res, RETURN_CODE.CANNOT_FIND_PERMISSIONS);
+                    return;
+                } else {
+                    var permType = [];
+
+                    // get permissions
+                    for (var i = 0; i < docs.length; i++) {
+                        if(docs[i].permType) {
+                            permType.push(docs[i].permType);
+                        }
+                    }
+
+                    // check permissions
+                    if( 100 in permType) {  // mockup if '100' is create user permissions
+                        cb(null, param.uCollection);
+                    }
+                    cb(null, param.uCollection);
+                }
+            });
         },
         function(collection, cb) {
             // check already exist user
