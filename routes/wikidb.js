@@ -476,8 +476,8 @@ exports.createDocument = function(req, res) {
     ]);
 }
 
-exports.checkoutDocumentUrl = function(req, res) {
-    console.log('checkoutDocumentUrl : ', req.body);
+exports.checkDocumentUrl = function(req, res) {
+    console.log('checkDocumentUrl : ', req.body);
     var email, url, docBase;
     var input = req.body;
     if ('em' in input && 'u' in input && 'db' in input) {
@@ -513,13 +513,13 @@ exports.checkoutDocumentUrl = function(req, res) {
                     });
                 } else {
                     res.send({
-                        sc: RETURN_CODE.SUCCESSS,
+                        sc: RETURN_CODE.SUCCESS,
                         sm: 'Document url doesn\'t exist'
                     });
                 }
             });
         }
-        ]);
+    ]);
 }
 
 exports.deleteDocument = function(req, res) {
