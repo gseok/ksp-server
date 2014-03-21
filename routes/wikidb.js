@@ -12,7 +12,6 @@ db.open(function(err, db) {
     }
 });
 
-
 // Return Code
 var RETURN_CODE = {
     SUCCESS: 0,
@@ -23,6 +22,18 @@ var RETURN_CODE = {
     CANNOT_FIND_REVISION: 5,
     USER_ALREADY_EXIST: 6,
     CANNOT_FIND_USER: 7
+};
+
+// Return Message
+var RETURN_MESSAGE = {
+    0: 'Success',
+    1: 'Unknown error has occurred',
+    2: 'Invalid parameter',
+    3: 'Cannot find a document',
+    4: 'Document url already exist',
+    5: 'Cannot find a revision',
+    6: 'User already exist',
+    7: 'Cannot find a user'
 };
 
 // Document type
@@ -36,6 +47,16 @@ var DOC_TYPE = {
 var SAVE_TYPE = {
     RENAME: 0,
     SAVE: 1
+}
+
+function sendReturnCode(res, returnCode, returnMessage) {
+    if (!returnMessage) {
+        returnMessage = RETURN_MESSAGE.returnCode;
+    }
+    res.send({
+        sc: returnCode,
+        sm: returnMessage
+    })
 }
 
 // checker : Array of string
@@ -61,9 +82,8 @@ function saveDoc(input, type, res) {
         function(cb) {
             db.collection('doc_revisions', function(err, revisions) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'});
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, revisions);
                 }
@@ -88,10 +108,8 @@ function saveDoc(input, type, res) {
                     }
                     cb(null, revisions, oldRevision);
                 } else {
-                    res.send({
-                        sc: RETURN_CODE.CANNOT_FIND_DOC,
-                        sm: 'Cannot find a document'
-                    });
+                    sendReturnCode(RETURN_CODE.CANNOT_FIND_DOC);
+                    return;
                 }
             });
         },
@@ -99,15 +117,11 @@ function saveDoc(input, type, res) {
             revisions.update({ _id: oldRevision._id }, { $set: { latest : false } });
             revisions.insert(newRevision, {}, function(err, result) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
-                    res.send({
-                        sc: RETURN_CODE.SUCCESS,
-                        sm: 'Successfully saved'
-                    });
+                    sendReturnCode(res, RETURN_CODE.SUCCESS);
+                    return;
                 }
             });
         }
@@ -129,25 +143,19 @@ exports.getDocumentTree = function(req, res) {
         locale = input.l.toLowerCase();
         depth = Number(input.d) - 1;
         if (depth < 1) {
-            res.send({
-                sc: RETURN_CODE.INVALID_PARAM,
-                sm: 'Invalid parameter'
-            });
+            sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+            return;
         }
     } else {
-        res.send({
-            sc: RETURN_CODE.INVALID_PARAM,
-            sm: 'Invalid parameter'
-        });
+        sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+        return;
     }
     async.waterfall([
         function(cb) {
             db.collection('docs', function(err, docs) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, docs);
                 }
@@ -156,18 +164,14 @@ exports.getDocumentTree = function(req, res) {
         function(docs, cb) {
             docs.findOne({url: url, docBase: docBase, deletedDate: ''}, function(err, item) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     if (item) {
                         cb(null, docs, item);
                     } else {
-                        res.send({
-                            sc: RETURN_CODE.CANNOT_FIND_DOC,
-                            sm: 'Cannot find a document'
-                        });
+                        sendReturnCode(res, RETURN_CODE.CANNOT_FIND_DOC);
+                        return;
                     }
                 }
             });
@@ -186,14 +190,9 @@ exports.getDocumentTree = function(req, res) {
                 deletedDate: ''
             }).toArray(function (err, items) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
-                    items.forEach(function(item) {
-                        console.log(item.url, item.left, item.right);
-                    });
                     cb(null, items);
                 }
             });
@@ -201,10 +200,8 @@ exports.getDocumentTree = function(req, res) {
         function(items, cb) {
              db.collection('doc_revisions', function(err, revisions) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, revisions, items);
                 }
@@ -215,10 +212,8 @@ exports.getDocumentTree = function(req, res) {
             items.forEach(function(doc) {
                 revisions.findOne({url: doc.url, docBase: docBase, locale: locale, latest: true, deletedDate: ''}, function(err, revision) {
                     if (err) {
-                        res.send({
-                            sc: RETURN_CODE.UNKNOWN_ERR,
-                            sm: 'Unknown error has occurred'
-                        });
+                        sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                        return;
                     } else {
                         if (revision) {
                             cb(null, doc, revision);
@@ -250,6 +245,7 @@ exports.getDocumentTree = function(req, res) {
                     uds: [],
                     dds: results
                 });
+                return;
             }
         }
     ]);
@@ -262,10 +258,8 @@ exports.saveDocument = function(req, res) {
     if (validateInputParams(['em', 'db', 'u', 'l', 't', 'c', 'is'], input)) {
         // TODO : user validation
     } else {
-        res.send({
-            sc: RETURN_CODE.INVALID_PARAM,
-            sm: 'Invalid parameter'
-        });
+        sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+        return;
     }
 
     // save document
@@ -300,10 +294,8 @@ exports.renameDocument = function(req, res) {
     if (validateInputParams(['em', 'db', 'u', 'l', 't'], input)) {
         // TODO : user validation
     } else {
-        res.send({
-            sc: RETURN_CODE.INVALID_PARAM,
-            sm: 'Invalid parameter'
-        });
+        sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+        return;
     }
 
     // rename document
@@ -326,19 +318,15 @@ exports.getDocument = function(req, res) {
         version = String(input.v);
         locale = input.l.toLowerCase();
     } else {
-        res.send({
-            sc: RETURN_CODE.INVALID_PARAM,
-            sm: 'Invalid parameter'
-        });
+        sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+        return;
     }
     async.waterfall([
         function(cb) {
             db.collection('docs', function(err, docs) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, docs);
                 }
@@ -349,10 +337,8 @@ exports.getDocument = function(req, res) {
                 if (doc) {
                     cb(null, docs, doc);
                 } else {
-                    res.send({
-                        sc: RETURN_CODE.CANNOT_FIND_DOC,
-                        sm: 'Cannot find a document'
-                    });
+                    sendReturnCode(res, RETURN_CODE.CANNOT_FIND_DOC);
+                    return;
                 }
             });
         },
@@ -370,10 +356,8 @@ exports.getDocument = function(req, res) {
         function(items, cb) {
             db.collection('doc_revisions', function(err, revisions) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, revisions, items);
                 }
@@ -384,16 +368,12 @@ exports.getDocument = function(req, res) {
             for (var i = 0; i < items.length; i++) {
                 revisions.findOne({url: items[i].url, docBase: items[i].docBase, version: version, deletedDate: ''}, function(err, rev) {
                     if (err) {
-                        res.send({
-                            sc: RETURN_CODE.UNKNOWN_ERR,
-                            sm: 'Unknown error has occurred'
-                        });
+                        sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                        return;
                     } else {
                         if (!rev) {
-                            res.send({
-                                sc: RETURN_CODE.CANNOT_FIND_REVISION,
-                                sm: 'Cannot find a revision'
-                            });
+                            sendReturnCode(res, RETURN_CODE.CANNOT_FIND_REVISION);
+                            return;
                         }
                         breadcrumbDocumentTitles.push(rev.title);
                         currentBreadcrumb++;
@@ -412,10 +392,8 @@ exports.getDocument = function(req, res) {
                 if (revision) {
                     cb(null, revision);
                 } else {
-                    res.send({
-                        sc: RETURN_CODE.CANNOT_FIND_REVISION,
-                        sm: 'Cannot find a revision'
-                    });
+                    sendReturnCode(res, RETURN_CODE.CANNOT_FIND_REVISION);
+                    return;
                 }
             });
         },
@@ -432,6 +410,7 @@ exports.getDocument = function(req, res) {
                 bu: breadcrumbDocumentUrls,
                 bt: breadcrumbDocumentTitles
             });
+            return;
         }
     ]);
 }
@@ -466,19 +445,15 @@ exports.createDocument = function(req, res) {
         newRevision.createdDate = now.toUTCString();
         newRevision.deletedDate = '';
     } else {
-        res.send({
-            sc: RETURN_CODE.INVALID_PARAM,
-            sm: 'Invalid parameter'
-        });
+        sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+        return;
     }    
     async.waterfall([
         function(cb) {
             db.collection('docs', function(err, docs) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, docs);
                 }
@@ -487,10 +462,8 @@ exports.createDocument = function(req, res) {
         function(docs, cb) {
             db.collection('doc_revisions', function(err, revisions) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, docs, revisions);
                 }
@@ -501,10 +474,8 @@ exports.createDocument = function(req, res) {
                 if (!item) {
                     cb(null, docs, revisions);
                 } else {
-                    res.send({
-                        sc: RETURN_CODE.DOCUMENT_URL_ALREADY_EXIST,
-                        sm: 'Document url already exist'
-                    });
+                    sendReturnCode(res, RETURN_CODE.DOCUMENT_URL_ALREADY_EXIST);
+                    return;
                 }
             });
         },
@@ -536,10 +507,8 @@ exports.createDocument = function(req, res) {
         function(docs, revisions, cb) {
             docs.insert(newDoc, {}, function(err, resultDoc) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, revisions, resultDoc);
                 }
@@ -548,10 +517,8 @@ exports.createDocument = function(req, res) {
         function(revisions, resultDoc, cb) {
             revisions.insert(newRevision, {}, function (err, resultRevision) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     res.send({
                         sc:RETURN_CODE.SUCCESS,
@@ -560,6 +527,7 @@ exports.createDocument = function(req, res) {
                         t: resultRevision[0].title,
                         pu: resultDoc[0].parentDocumentUrl
                     });
+                    return;
                 }
             })
         }
@@ -576,19 +544,15 @@ exports.checkDocumentUrl = function(req, res) {
         url = input.u;
         docBase = input.db;
     } else {
-        res.send({
-            sc: RETURN_CODE.INVALID_PARAM,
-            sm: 'Invalid parameter'
-        });
+        sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+        return;
     }
     async.waterfall([
         function(cb) {
             db.collection('docs', function(err, collection) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, collection);
                 }
@@ -597,15 +561,11 @@ exports.checkDocumentUrl = function(req, res) {
         function(collection, cb) {
             collection.findOne({url: url, docBase:docBase, deletedDate: ''}, function(err, doc) {
                 if (doc) {
-                    res.send({
-                        sc: RETURN_CODE.DOCUMENT_URL_ALREADY_EXIST,
-                        sm: 'Document url already exist'
-                    });
+                    sendReturnCode(res, RETURN_CODE.DOCUMENT_URL_ALREADY_EXIST);
+                    return;
                 } else {
-                    res.send({
-                        sc: RETURN_CODE.SUCCESS,
-                        sm: 'Document url doesn\'t exist'
-                    });
+                    sendReturnCode(res, RETURN_CODE.SUCCESS);
+                    return;
                 }
             });
         }
@@ -622,19 +582,15 @@ exports.deleteDocument = function(req, res) {
         url = input.u;
         docBase = input.db;
     } else {
-        res.send({
-            sc: RETURN_CODE.INVALID_PARAM,
-            sm: 'Invalid parameter'
-        });
+        sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+        return;
     }
     async.waterfall([
         function(cb) {
             db.collection('docs', function(err, docs) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, docs);
                 }
@@ -643,10 +599,8 @@ exports.deleteDocument = function(req, res) {
         function(docs, cb) {
             db.collection('doc_revisions', function(err, revisions) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, docs, revisions);
                 }
@@ -657,10 +611,8 @@ exports.deleteDocument = function(req, res) {
                 if (doc) {
                     cb(null, docs, revisions, doc);
                 } else {
-                    res.send({
-                        sc: RETURN_CODE.CANNOT_FIND_DOC,
-                        sm: 'Cannot find a document'
-                    });
+                    sendReturnCode(res, RETURN_CODE.CANNOT_FIND_DOC);
+                    return;
                 }
             });
         },
@@ -672,10 +624,8 @@ exports.deleteDocument = function(req, res) {
                     docs.update({_id: items[i]._id},{$set: {deletedDate: deletedDate}});
                     revisions.update({url: items[i].url},{$set: {deletedDate: deletedDate}});
                 }
-                res.send({
-                    sc: RETURN_CODE.SUCCESS,
-                    sm: 'Successfully Deleted'
-                });
+                sendReturnCode(res, RETURN_CODE.SUCCESS);
+                return;
             });
         },
     ]);
@@ -694,19 +644,15 @@ exports.getDocumentHistory = function(req, res) {
         startPosition = Number(input.s);
         length = Number(input.le);
     } else {
-        res.send({
-            sc: RETURN_CODE.INVALID_PARAM,
-            sm: 'Invalid parameter'
-        });
+        sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+        return;
     }
     async.waterfall([
         function(cb) {
             db.collection('doc_revisions', function(err, revisions) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, revisions);
                 }
@@ -719,10 +665,8 @@ exports.getDocumentHistory = function(req, res) {
                 });
 
                 if (revisions.length < startPosition) {
-                    res.send({
-                        sc: RETURN_CODE.INVALID_PARAM,
-                        sm: 'Invalid parameter'
-                    });
+                    sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+                    return;
                 } else {
                     var results = [];
                     for(var i = startPosition; i < revisions.length; i++) {
@@ -738,6 +682,7 @@ exports.getDocumentHistory = function(req, res) {
                         sm: 'Successfully get document history',
                         vs: results
                     });
+                    return;
                 }
             });
         }
@@ -771,10 +716,8 @@ exports.addUser = function(req, res) {
         email = input.em;
         value = input.v;
     } else {
-        res.send({
-            sc: RETURN_CODE.INVALID_PARAM,
-            sm: 'Invalid parameter'
-        });
+        sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+        return;
     }
 
     // add user
@@ -783,10 +726,8 @@ exports.addUser = function(req, res) {
             // get users collection
             db.collection('users', function(err, collection) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, collection);
                 }
@@ -800,17 +741,13 @@ exports.addUser = function(req, res) {
 
             collection.find(query).toArray(function(err, docs) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     if (!docs || docs.length < 1) {
                         // not exist
-                        res.send({
-                            sc: RETURN_CODE.CANNOT_FIND_USER,
-                            sm: '"' + email + '" user not exist'
-                        });
+                        sendReturnCode(res, RETURN_CODE.CANNOT_FIND_USER, '"' + email + '" user not exist');
+                        return;
                     } else {
                         // exist
                         cb(null, collection);
@@ -831,17 +768,13 @@ exports.addUser = function(req, res) {
 
             collection.find(query).toArray(function(err, docs) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     if (docs && docs.length > 0) {
                         // already exist
-                        res.end({
-                            sc: RETURN_CODE.USER_ALREADY_EXIST,
-                            sm: '"' + value + '" user already exist'
-                        });
+                        sendReturnCode(res, RETURN_CODE.USER_ALREADY_EXIST, '"' + value + '" user already exist');
+                        return;
                     } else {
                         // not exist
                         cb(null, collection);
@@ -866,15 +799,11 @@ exports.addUser = function(req, res) {
             // add new user
             collection.insert(user, {}, function(err, result) {
                 if (err) {
-                    res.send({
-                        sc: RETURN_CODE.UNKNOWN_ERR,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
-                    res.send({
-                        sc: RETURN_CODE.SUCCESS,
-                        sm: 'Successfully add new user'
-                    });
+                    sendReturnCode(res, RETURN_CODE.SUCCESS);
+                    return;
                 }
             });
         }
@@ -891,10 +820,8 @@ exports.searchDocument = function(req, res) {
         keyword = input.k;
         locale = input.l.toLowerCase();
     } else {
-        res.send({
-            sc: 2,
-            sm: 'Invalid parameter'
-        });
+        sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+        return;
     }
     function makeResponse(items){
         var docs = [];
@@ -912,10 +839,8 @@ exports.searchDocument = function(req, res) {
         function(cb) {
             db.collection('docs', function(err, collection) {
                 if (err) {
-                    res.send({
-                        sc: 1,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     cb(null, collection);
                 }
@@ -927,11 +852,12 @@ exports.searchDocument = function(req, res) {
                     var docs = makeResponse(items);
                     res.send({
                         items:items,
-                        sc: 0,
+                        sc: RETURN_CODE.SUCCESS,
                         sm: 'Successfully get document history',
-                        t:docs.length,
+                        t: docs.length,
                         vs: docs
                     });
+                    return;
                 });
             } else {
                 var splitKeyword = keyword.split(' ');
@@ -947,14 +873,10 @@ exports.searchDocument = function(req, res) {
                         findArray.push({$or : set});
                     }
                 }
-
-                collection.find( {$and:findArray} ).toArray(function(err, items){
-
+                collection.find( {$and:findArray} ).toArray(function(err, items) {
                     if (err) {
-                        res.send({
-                            sc: 1,
-                            sm: 'Unknown error has occurred'
-                        });
+                        sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                        return;
                     } else {
                         cb(null, collection, items, findArray);
                     }
@@ -962,9 +884,7 @@ exports.searchDocument = function(req, res) {
             }
         },
         function(collection, andItems, findArray, cb) {
-            
             function isInArray(item, array2, a) {
-
                 for(var i=0; i < array2.length; i++) {
                     if(item.url === array2[i].url && item.docBase === array2[i].docBase) {
                         return true;
@@ -973,11 +893,8 @@ exports.searchDocument = function(req, res) {
                 return false;
             }
             function removeArrayDuplicate(array, array2) {
-                
                 var ret = [];
-                
                 for(var i=0; i <array.length; i++){
-                    
                     if (isInArray(array[i], array2, i) === false) {
                         ret.push(array[i]);
                     }
@@ -988,26 +905,21 @@ exports.searchDocument = function(req, res) {
             
             collection.find( {$or:findArray}).toArray(function(err, orItems){
                 if (err) {
-                    res.send({
-                        sc: 1,
-                        sm: 'Unknown error has occurred'
-                    });
+                    sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                    return;
                 } else {
                     var orItems2 = removeArrayDuplicate(orItems, andItems);
                     var items = andItems.concat(orItems2);
                     var docs = makeResponse(items);
                     res.send({
-                        andItems:andItems,
-                        orItems2:orItems2,
                         items:items,
-                        sc: 0,
+                        sc: RETURN_CODE.SUCCESS,
                         sm: 'Successfully get document history',
                         t:docs.length,
                         vs: docs
                     });
+                    return;
                 }
-                
-                
             });
         }
     ]);
