@@ -702,6 +702,12 @@ exports.addUser = function(req, res) {
         return;
     }
 
+    // email check
+    if (!util.isEmail(email) || !util.isEmail(value)) {
+        sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
+        return;
+    }
+
     // add user
     async.waterfall([
         function(cb) {
@@ -843,9 +849,8 @@ exports.addUser = function(req, res) {
             var user = {};
 
             // create new user docuemnt
-            // TODO: need to user 'name' and 'locale' assign logic
             user.email = value;
-            user.name = '';
+            user.name = util.getEmailToName(value) || '';
             user.locale = '';
             var now = new Date().toUTCString();
             user.createdDate = now;
