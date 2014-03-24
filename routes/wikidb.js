@@ -62,7 +62,7 @@ function sendReturnCode(res, returnCode, returnMessage) {
     res.send({
         sc: returnCode,
         sm: returnMessage
-    })
+    });
 }
 
 function getCollection(collectionName, cb) {
@@ -111,7 +111,9 @@ function saveDoc(input, type, res) {
                     var now = new Date();
                     newRevision.createdDate = now.toUTCString();
                     newRevision.authorName = input.em.substring(0, input.em.indexOf('@'));
+                    console.log(newRevision.version);
                     var newVersion = Number(newRevision.version) + 1;
+                    console.log(newVersion);
                     newRevision.version = String(newVersion);
                     if (type === SAVE_TYPE.SAVE) {
                         newRevision.title = input.t;
@@ -134,6 +136,7 @@ function saveDoc(input, type, res) {
                     sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
                     return;
                 } else {
+                    console.log(result);
                     sendReturnCode(res, RETURN_CODE.SUCCESS);
                     return;
                 }
@@ -146,7 +149,7 @@ function saveDoc(input, type, res) {
 exports.getDocumentTree = function(req, res) {
     console.log('getDocumentTree', req.body);
     var input = req.body;
-    var docBase, locale, depth, url;
+    var docBase, locale, url, depth;
     var results = [];
     var totalResults = 0;
     var processedResults = 0;
@@ -155,11 +158,7 @@ exports.getDocumentTree = function(req, res) {
         docBase = input.db;
         url = input.u;
         locale = input.l.toLowerCase();
-        depth = Number(input.d) - 1;
-        if (depth < 1) {
-            sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
-            return;
-        }
+        depth = input.d;
     } else {
         sendReturnCode(res, RETURN_CODE.INVALID_PARAM);
         return;
@@ -184,16 +183,9 @@ exports.getDocumentTree = function(req, res) {
             });
         },
         function(docs, item, cb) {
-            var leftLimit = Number(item.left) + Number(depth);
             docs.find({
-                '$or' : [
-                    {
-                        left: { '$gte': item.left, '$lte': leftLimit }
-                    },
-                    {
-                        right: { '$lte': item.right }
-                    }
-                ],
+                left: { '$gte': item.left },
+                right: { '$lte': item.right },
                 deletedDate: ''
             }).toArray(function (err, items) {
                 if (err) {
@@ -231,19 +223,19 @@ exports.getDocumentTree = function(req, res) {
         },
         function(doc, revision) {
             var result = {};
-                result.t = revision.title;
-                result.u = doc.url;
-                result.tp = doc.docType;
-                result.pu = doc.parentDocumentUrl;
-                result.up = { // TODO with permissions
-                    v: true,
-                    m: true,
-                    a: true,
-                    d: true,
-                    ad: true,
-                };
-                result.c = doc.hasChild;
-                results.push(result);
+            result.t = revision.title;
+            result.u = doc.url;
+            result.tp = doc.docType;
+            result.pu = doc.parentDocumentUrl;
+            result.up = { // TODO with permissions
+                v: true,
+                m: true,
+                a: true,
+                d: true,
+                ad: true,
+            };
+            result.c = doc.hasChild;
+            results.push(result);
             processedResults++;
             if (processedResults === totalResults) {
                 res.send({
@@ -364,9 +356,27 @@ exports.getDocument = function(req, res) {
             });
         },
         function(revisions, items, cb) {
+            if (Number(version) === 0) {
+                revisions.findOne({url: url, docBase: docBase, latest: true, deletedDate: ''} ,function(err, rev) {
+                    if (err) {
+                        sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
+                        return;
+                    } else {
+                        if (!rev) {
+                            sendReturnCode(res, RETURN_CODE.CANNOT_FIND_REVISION);
+                            return;
+                        } else {
+                            version = String(rev.version);
+                            cb(null, revisions, items);
+                        }
+                    }
+                });
+            }
+        },
+        function(revisions, items, cb) {
             totalBreadcrumb = items.length;
             for (var i = 0; i < items.length; i++) {
-                revisions.findOne({url: items[i].url, docBase: items[i].docBase, version: version, deletedDate: ''}, function(err, rev) {
+                revisions.findOne({url: items[i].url, docBase: items[i].docBase, latest: true, deletedDate: ''}, function(err, rev) {
                     if (err) {
                         sendReturnCode(res, RETURN_CODE.UNKNOWN_ERR);
                         return;
