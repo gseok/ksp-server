@@ -1,6 +1,6 @@
 // db and library setting
 var mongo = require('mongodb');
-var async = require('async');
+async = require('async');
 var util = require('./commonUtils');
 var Server = mongo.Server,
 Db = mongo.Db,
@@ -732,6 +732,16 @@ exports.addUser = function(req, res) {
             });            
         },
         function(collection, doc, cb) {
+            util.getPremission(doc._id, function(permType) {
+                // check permissions
+                if( '100' in permType) {  // mockup if '100' is create user permissions
+                    cb(null, collection);
+                }
+                cb(null, collection);
+            });
+        },
+/*        
+        function(collection, doc, cb) {
             // get user_role_map collection
             var param = {
                 uCollection: collection,
@@ -804,6 +814,8 @@ exports.addUser = function(req, res) {
                 }
             });
         },
+*/
+
         function(collection, cb) {
             // check already exist user
             var query = {

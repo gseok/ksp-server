@@ -15,9 +15,10 @@ describe('UTIL', function(){
 
 	describe('getPremission', function() {
 		it('should return null', function(done) {
-			var per = util.getPremission();
-			(per == null).should.be.true;
-			done();
+			var per = util.getPremission(null, function(permType){
+				(permType == null).should.be.true;
+				done();
+			});
 		});
 
 		it('should find permission', function(done) {

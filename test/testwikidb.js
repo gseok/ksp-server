@@ -25,7 +25,7 @@ describe('API', function(){
 					d.should.be.an.instanceOf(Object).and.have.property('sm');
 					d.should.be.an.instanceOf(Object).and.have.property('sc');
 					d.sc.should.equal(0);
-					d.sm.should.equal('Successfully saved');
+					d.sm.should.equal('Success');
 
 					done();
 				});
